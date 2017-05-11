@@ -1,6 +1,6 @@
 import abc
 
-from nudge.db import db
+from nudge.orm import EntityOrm
 
 
 class Entity(metaclass=abc.ABCMeta):
@@ -10,7 +10,7 @@ class Entity(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def to_orm(self):
-        return db.Model()
+        return EntityOrm()
 
     @staticmethod
     @abc.abstractmethod
@@ -20,3 +20,5 @@ class Entity(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def create(self, *args, **kwargs):
         return Entity()
+
+

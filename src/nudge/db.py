@@ -1,36 +1,24 @@
 import flask_sqlalchemy
-import sqlalchemy.dialects.postgresql
+from nudge.orm import EntityOrm
 
 
-db = flask_sqlalchemy.SQLAlchemy()
+def create_db(app, db_uri):
+    app.config.update(
+        SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        SQLALCHEMY_DATABASE_URI=db_uri,
+    )
+
+    return flask_sqlalchemy.SQLAlchemy(app)
 
 
-class SubscriptionOrm(db.Model):
-    __tablename__ = 'subscription'
-
-    id = db.Column(db.String, primary_key=True)
-    state = db.Column(db.String)
-    bucket = db.Column(db.String)
-    prefix = db.Column(db.String)
-    data = db.Column(sqlalchemy.dialects.postgresql.JSONB)
+def recreate_tables(engine):
+    drop_tables(engine)
+    create_tables(engine)
 
 
-class NotificationOrm(db.Model):
-    __tablename__ = 'notification'
-
-    id = db.Column(db.String, primary_key=True)
-    bucket = db.Column(db.String)
-    prefix = db.Column(db.String)
-    config_id = db.Column(db.String)
-    data = db.Column(sqlalchemy.dialects.postgresql.JSONB)
+def create_tables(engine):
+    EntityOrm.metadata.create_all(bind=engine)
 
 
-class ElementOrm(db.Model):
-    __tablename__ = 'element'
-
-    id = db.Column(db.String, primary_key=True)
-    state = db.Column(db.String)
-    bucket = db.Column(db.String)
-    key = db.Column(db.String)
-    subscription_id = db.Column(db.String)
-    data = db.Column(sqlalchemy.dialects.postgresql.JSONB)
+def drop_tables(engine):
+    EntityOrm.metadata.create_all(bind=engine)

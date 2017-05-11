@@ -3,18 +3,15 @@ import os
 
 import flask
 
-from nudge.db import db
 import nudge.function
+import nudge.context
 
 
-def create_app(db_uri):
+def create_app():
     app = flask.Flask('nudge')
     app.config.update(
         DEBUG=True,
-        SQLALCHEMY_DATABASE_URI=db_uri,
     )
-
-    db.init_app(app)
 
     for name, fn in _functions.items():
         _add_function(app, name, fn)
@@ -80,7 +77,7 @@ def handle_object_created(request):
 @api_function('Consume')
 def consume(request):
     nudge.function.consume(
-        element_ids=request['ElementIds'],
+        elem_ids=request['ElementIds'],
     )
 
     return {'Message': 'Success'}
@@ -89,14 +86,14 @@ def consume(request):
 @api_function('Unsubscribe')
 def unsubscribe(request):
     nudge.function.unsubscribe(
-        subscription_id=request['SubscriptionId'],
+        sub_id=request['SubscriptionId'],
     )
 
     return {'Message': 'Success'}
 
 
 if __name__ == '__main__':
-    create_app(
+    ctx = nudge.context.NudgeContext(
         db_uri='postgresql://{u}:{p}@{e}:5432/{db}'.format(
             e=os.environ['NUDGE_DB_ENDPOINT'],
             db=os.environ['NUDGE_DB_NAME'],
@@ -104,3 +101,5 @@ if __name__ == '__main__':
             p=os.environ['NUDGE_DB_PASSWORD'],
         ),
     )
+
+    ctx.app.run()

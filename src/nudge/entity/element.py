@@ -1,8 +1,11 @@
 import enum
 import uuid
 
+from nudge.entity.entity import Entity
+from nudge.orm import ElementOrm
 
-class Element:
+
+class Element(Entity):
 
     @property
     def id(self):
@@ -13,16 +16,16 @@ class Element:
         return self._state
 
     @property
-    def subscription_id(self):
+    def subscription(self):
         return self._subscription
 
-    def __init__(self, id, state, bucket, key, subscription_id, ):
+    def __init__(self, id, state, bucket, key, subscription):
         super(Element, self).__init__()
         self._id = id
         self._state = state
         self._bucket = bucket
         self._key = key
-        self._subscription_id = subscription_id
+        self._subscription = subscription
 
     def to_orm(self):
         return ElementOrm(
@@ -44,15 +47,13 @@ class Element:
         )
 
     @staticmethod
-    def create(subscription_id, bucket, key, size, time):
+    def create(subscription_id, bucket, key):
         return Element(
             id=str(uuid.uuid4()),
             state=ElementState.UNCONSUMED,
             bucket=bucket,
             key=key,
-            subscription_id=subscription_id,
-            size=size,
-            time=time
+            subscription=subscription_id,
         )
 
 

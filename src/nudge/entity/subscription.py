@@ -1,13 +1,37 @@
-import abc
 import enum
 import uuid
 
-import boto3
-from cached_property import cached_property
+import marshmallow as mm
+import revolio as rv
+import sqlalchemy as sa
 
-from nudge.db import SubscriptionOrm
+from nudge.db import Database
 from nudge.entity.entity import Entity
+from nudge.orm import SubscriptionOrm
 from nudge.util import Serializable
+
+
+class SubscriptionService:
+
+    def __init__(self, db: Database):
+        super(SubscriptionService, self).__init__()
+        self._db = db
+
+    def deactivate(self, id):
+        success = self._db \
+            .query(SubscriptionOrm) \
+            .filter(SubscriptionOrm.id == id) \
+            .update(state=SubscriptionState.Inactive.value)
+
+        if not success:
+            raise Exception('No subscription with id {}'.format(id))
+
+    def find_matching_subscriptions(self, bucket, key):
+        self._db \
+            .query(SubscriptionOrm) \
+            .filter(SubscriptionOrm.bucket == bucket) \
+            .filter(sa.sql.expression.bindparam('k', key).startswith(SubscriptionOrm.prefix)) \
+            .all()
 
 
 class Subscription(Entity):
@@ -40,6 +64,18 @@ class Subscription(Entity):
     def endpoint(self):
         return self._endpoint
 
+    @staticmethod
+    def create(bucket, endpoint, prefix=None, regex=None, threshold=0):
+        return Subscription(
+            id=str(uuid.uuid4()),
+            state=SubscriptionState.Active,
+            bucket=bucket,
+            prefix=prefix,
+            regex=regex,
+            threshold=threshold,
+            endpoint=SubscriptionEndpoint.deserialize(endpoint),
+        )
+
     def __init__(self, id, state, bucket, prefix, regex, threshold, endpoint):
         super(Subscription, self).__init__()
         self._id = id
@@ -49,18 +85,6 @@ class Subscription(Entity):
         self._regex = regex
         self._threshold = threshold
         self._endpoint = endpoint
-
-    @staticmethod
-    def create(bucket, endpoint, *, prefix=None, regex=None, threshold=0):
-        return Subscription(
-            id=str(uuid.uuid4()),
-            state=SubscriptionState.Active,
-            bucket=bucket,
-            prefix=prefix,
-            regex=regex,
-            threshold=threshold,
-            endpoint=Endpoint.deserialize(endpoint),
-        )
 
     def to_orm(self):
         return SubscriptionOrm(
@@ -84,7 +108,7 @@ class Subscription(Entity):
             prefix=orm.prefix,
             regex=orm.data['regex'],
             threshold=orm.data['threshold'],
-            endpoint=Endpoint.deserialize(orm.data['endpoint']),
+            endpoint=SubscriptionEndpoint.deserialize(orm.data['endpoint']),
         )
 
 
@@ -96,44 +120,59 @@ class SubscriptionState(enum.Enum):
 # endpoint
 
 
-class EndpointProtocol(enum.Enum):
-    Sqs = 'Sqs'
-
-
-class Endpoint(Serializable):
+class SubscriptionEndpoint(Serializable):
 
     def serialize(self):
-        pass
+        return {}  # todo
 
-    @staticmethod
-    def deserialize(data):
-        protocol = EndpointProtocol[data['Protocol']]
-        params = data['Parameters']
-
-        if protocol == EndpointProtocol.Sqs:
-            return SqsEndpoint.deserialize(params)
-
-    @abc.abstractmethod
-    def send_message(self, msg):
-        pass
+    @classmethod
+    def deserialize(cls, data):
+        return SubscriptionEndpoint()  # todo
 
 
-class SqsEndpoint(Endpoint):
+# schema
 
-    def __init__(self, queue_url):
-        super(SqsEndpoint, self).__init__()
-        self._queue_url = queue_url
 
-    @staticmethod
-    def deserialize(data):
-        return SqsEndpoint(queue_url=data['QueueUrl'])
+class SubscriptionEndpointSchema(mm.Schema):
+    Protocol = mm.fields.Str()
+    Params = mm.fields.Dict()
 
-    @cached_property
-    def _client(self):
-        return boto3.cilent('sqs')
 
-    def send_message(self, msg):
-        self._client.send_message(
-            QueueUrl=self._queue_url,
-            MessageBody=msg,
-        )
+class SubscriptionSchema(mm.Schema):
+    id = mm.fields.UUID(
+        required=True,
+    )
+
+    state = mm.fields.Str(
+        required=True,
+    )
+
+    bucket = mm.fields.Str(
+        required=True,
+    )
+
+    prefix = mm.fields.Str(
+        default=None,
+    )
+
+    regex = mm.fields.Str(
+        default=None,
+        help=' '.join([
+            'The regular expression against which',
+            'the remainder of the key is matched.',
+            'Syntax follows that of the python re package.',
+        ]),
+    )
+
+    threshold = mm.fields.Int(
+        default=0,
+        help='The byte threshold at which a subscription batch is created',
+    )
+
+    endpoint = mm.fields.Nested(
+        SubscriptionEndpointSchema(),
+    )
+
+    @mm.post_load
+    def return_subscription_entity(self, data):
+        return Subscription(**data)

@@ -8,6 +8,7 @@ setup(
     packages=find_packages('src'),
     package_dir={'': 'src'},
     install_requires=[
+        'cached-property',
         'flask',
         'flask-sqlalchemy',
         'psycopg2',

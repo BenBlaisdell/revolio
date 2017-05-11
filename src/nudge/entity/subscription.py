@@ -2,10 +2,8 @@ import enum
 import uuid
 
 import marshmallow as mm
-import revolio as rv
 import sqlalchemy as sa
 
-from nudge.db import Database
 from nudge.entity.entity import Entity
 from nudge.orm import SubscriptionOrm
 from nudge.util import Serializable
@@ -13,12 +11,12 @@ from nudge.util import Serializable
 
 class SubscriptionService:
 
-    def __init__(self, db: Database):
+    def __init__(self, session):
         super(SubscriptionService, self).__init__()
-        self._db = db
+        self._session = session
 
     def deactivate(self, id):
-        success = self._db \
+        success = self._session \
             .query(SubscriptionOrm) \
             .filter(SubscriptionOrm.id == id) \
             .update(state=SubscriptionState.Inactive.value)
@@ -27,7 +25,7 @@ class SubscriptionService:
             raise Exception('No subscription with id {}'.format(id))
 
     def find_matching_subscriptions(self, bucket, key):
-        self._db \
+        self._session \
             .query(SubscriptionOrm) \
             .filter(SubscriptionOrm.bucket == bucket) \
             .filter(sa.sql.expression.bindparam('k', key).startswith(SubscriptionOrm.prefix)) \
@@ -65,7 +63,7 @@ class Subscription(Entity):
         return self._endpoint
 
     @staticmethod
-    def create(bucket, endpoint, prefix=None, regex=None, threshold=0):
+    def create(bucket, endpoint, *, prefix=None, regex=None, threshold=0):
         return Subscription(
             id=str(uuid.uuid4()),
             state=SubscriptionState.Active,

@@ -11,6 +11,7 @@ setup(
         'cached-property',
         'flask',
         'flask-sqlalchemy',
+        'marshmallow',
         'psycopg2',
         'sqlalchemy',
     ],

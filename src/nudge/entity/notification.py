@@ -9,15 +9,15 @@ from nudge.orm import NotificationOrm
 
 class NotificationService:
 
-    def __init__(self, db):
+    def __init__(self, session):
         super(NotificationService, self).__init__()
-        self._db = db
+        self._session = session
 
     def get_covered_notifications(self, n):
         return map(Notification.from_orm, self._get_covered_notifications(n))
 
     def _get_covered_notifications(self, n):
-        return self._db \
+        return self._session \
             .query(NotificationOrm) \
             .filter(NotificationOrm.bucket == n.bucket) \
             .filter(NotificationOrm.prefix.startswith(sa.sql.expression.bindparam('p', n.prefix))) \
@@ -29,7 +29,7 @@ class NotificationService:
 
     def _get_covering_notification(self, n):
         try:
-            self._db \
+            self._session \
                 .query(NotificationOrm) \
                 .filter(NotificationOrm.bucket == n.bucket) \
                 .filter(sa.sql.expression.bindparam('p', n.prefix).startswith(NotificationOrm.prefix)) \

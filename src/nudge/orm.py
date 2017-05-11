@@ -36,7 +36,7 @@ class NotificationOrm(EntityOrm):
 
     bucket = sa.Column(sa.String, primary_key=True)
     prefix = sa.Column(sa.String, primary_key=True)
-    c_id = sa.Column(sa.String)
+    config_id = sa.Column(sa.String)
 
 
 class ElementOrm(EntityOrm):
@@ -44,6 +44,5 @@ class ElementOrm(EntityOrm):
 
     id = sa.Column(sa.String, primary_key=True)
     state = sa.Column(sa.String)
-    bucket = sa.Column(sa.String)
-    key = sa.Column(sa.String)
-    subscription = sa.Column(sa.String)
+    sub_id = sa.Column(sa.String)
+

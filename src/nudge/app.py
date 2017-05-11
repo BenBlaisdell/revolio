@@ -3,25 +3,24 @@ import os
 
 import flask
 
-import nudge.function
 import nudge.context
 
 
-def create_app(configs):
+def create_app(ctx, configs):
     app = flask.Flask('nudge')
     app.config.update(**configs)
 
     for name, fn in _functions.items():
-        _add_function(app, name, fn)
+        _add_function(app, name, fn, ctx)
 
     return app
 
 
-def _add_function(app, name, fn):
+def _add_function(app, name, fn, ctx):
     app.add_url_rule(
         '/api/1/call/{}/'.format(name),
         name,
-        lambda: json.dumps(fn(flask.request.get_json(force=True))),
+        lambda: json.dumps(fn(ctx, flask.request.get_json(force=True))),
         methods=['POST'],
     )
 
@@ -40,8 +39,8 @@ def api_function(name):
 
 
 @api_function('Subscribe')
-def subscribe(request):
-    sub = nudge.function.subscribe(
+def subscribe(ctx, request):
+    sub = ctx.functions.subscribe(
         bucket=request['Bucket'],
         prefix=request['Prefix'],
         endpoint=request['Endpoint'],
@@ -55,14 +54,14 @@ def subscribe(request):
 
 
 @api_function('HandleObjectCreated')
-def handle_object_created(request):
+def handle_object_created(ctx, request):
     return {
         'MatchingSubscriptions': {
-            elem.subscription: {
+            elem.sub_id: {
                 'ElementId': elem.id,
                 'Triggered': triggered,
             }
-            for elem, triggered in nudge.function.handle_obj_created(
+            for elem, triggered in ctx.functions.handle_obj_created(
                 bucket=request['Bucket'],
                 key=request['Key'],
                 size=request['Size'],
@@ -73,8 +72,8 @@ def handle_object_created(request):
 
 
 @api_function('Consume')
-def consume(request):
-    nudge.function.consume(
+def consume(ctx, request):
+    ctx.functions.consume(
         elem_ids=request['ElementIds'],
     )
 
@@ -82,8 +81,8 @@ def consume(request):
 
 
 @api_function('Unsubscribe')
-def unsubscribe(request):
-    nudge.function.unsubscribe(
+def unsubscribe(ctx, request):
+    ctx.functions.unsubscribe(
         sub_id=request['SubscriptionId'],
     )
 
@@ -99,7 +98,7 @@ if __name__ == '__main__':
             p=os.environ['NUDGE_DB_PASSWORD'],
         ),
         app_configs={
-            'DUBUG': True,
+            'DEBUG': True,
         }
     )
 

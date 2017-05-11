@@ -16,24 +16,46 @@ class Element(Entity):
         return self._state
 
     @property
-    def subscription(self):
-        return self._subscription
+    def sub_id(self):
+        return self._sub_id
 
-    def __init__(self, id, state, bucket, key, subscription):
+    @property
+    def bucket(self):
+        return self._bucket
+
+    @property
+    def key(self):
+        return self._key
+
+    @property
+    def size(self):
+        return self._size
+
+    @property
+    def time(self):
+        return self._time
+
+    def __init__(self, id, state, sub_id, bucket, key, size, time):
         super(Element, self).__init__()
         self._id = id
         self._state = state
+        self._sub_id = sub_id
         self._bucket = bucket
         self._key = key
-        self._subscription = subscription
+        self._size = size
+        self._time = time
 
     def to_orm(self):
         return ElementOrm(
             id=self._id,
             state=self._state,
-            bucket=self._bucket,
-            key=self._key,
-            subscription=self._subscription,
+            sub_id=self._sub_id,
+            data=dict(
+                bucket=self._bucket,
+                key=self._key,
+                size=self._size,
+                time=self._time,
+            ),
         )
 
     @staticmethod
@@ -41,19 +63,23 @@ class Element(Entity):
         return Element(
             id=orm.id,
             state=ElementState[orm.state],
+            sub_id=orm.subscription,
             bucket=orm.bucket,
-            key=orm.key,
-            subscription=orm.subscription,
+            key=orm.data['key'],
+            size=orm.data['size'],
+            time=orm.data['time'],
         )
 
     @staticmethod
-    def create(subscription_id, bucket, key):
+    def create(sub_id, bucket, key, size, time):
         return Element(
             id=str(uuid.uuid4()),
             state=ElementState.UNCONSUMED,
+            sub_id=sub_id,
             bucket=bucket,
             key=key,
-            subscription=subscription_id,
+            size=size,
+            time=time,
         )
 
 

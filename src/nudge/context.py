@@ -2,13 +2,14 @@ from cached_property import cached_property
 
 import nudge.app
 import nudge.db
+from nudge.function import FunctionDirectory
 
 
 class NudgeContext:
 
-    def __init__(self, app_configs, db_uri):
+    def __init__(self, db_uri, *, app_configs=None):
         self._db_uri = db_uri
-        self._app_configs = app_configs
+        self._app_configs = app_configs or {}
 
     @cached_property
     def db_uri(self):
@@ -20,7 +21,7 @@ class NudgeContext:
 
     @cached_property
     def app(self):
-        return nudge.app.create_app(self.app_configs)
+        return nudge.app.create_app(self, self.app_configs)
 
     @cached_property
     def db(self):
@@ -28,3 +29,7 @@ class NudgeContext:
             self.app,
             self.db_uri,
         )
+
+    @cached_property
+    def functions(self):
+        return FunctionDirectory(self)

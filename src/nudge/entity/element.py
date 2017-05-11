@@ -1,3 +1,4 @@
+import datetime as dt
 import enum
 import uuid
 
@@ -9,6 +10,15 @@ class ElementService:
 
     def __init__(self, session):
         self._session = session
+
+    def get_sub_elems(self, sub_id):
+        return [Element.from_orm(orm) for orm in self._get_sub_elems(sub_id)]
+
+    def _get_sub_elems(self, sub_id):
+        return self._session \
+            .query(ElementOrm) \
+            .filter(ElementOrm.sub_id == sub_id) \
+            .all()
 
 
 class Element(Entity):
@@ -38,10 +48,10 @@ class Element(Entity):
         return self._size
 
     @property
-    def time(self):
-        return self._time
+    def created(self):
+        return self._created
 
-    def __init__(self, id, state, sub_id, bucket, key, size, time):
+    def __init__(self, id, state, sub_id, bucket, key, size, created):
         super(Element, self).__init__()
         self._id = id
         self._state = state
@@ -49,18 +59,18 @@ class Element(Entity):
         self._bucket = bucket
         self._key = key
         self._size = size
-        self._time = time
+        self._created = created
 
     def to_orm(self):
         return ElementOrm(
             id=self._id,
-            state=self._state,
+            state=self._state.value,
             sub_id=self._sub_id,
             data=dict(
                 bucket=self._bucket,
                 key=self._key,
                 size=self._size,
-                time=self._time,
+                created=self._created,
             ),
         )
 
@@ -69,15 +79,15 @@ class Element(Entity):
         return Element(
             id=orm.id,
             state=ElementState[orm.state],
-            sub_id=orm.subscription,
-            bucket=orm.bucket,
+            sub_id=orm.sub_id,
+            bucket=orm.data['bucket'],
             key=orm.data['key'],
-            size=orm.data['size'],
-            time=orm.data['time'],
+            size=int(orm.data['size']),
+            created=dt.datetime.strptime(orm.data['created'], '%Y-%m-%d %H:%M:%S'),
         )
 
     @staticmethod
-    def create(sub_id, bucket, key, size, time):
+    def create(sub_id, bucket, key, size, created):
         return Element(
             id=str(uuid.uuid4()),
             state=ElementState.UNCONSUMED,
@@ -85,7 +95,7 @@ class Element(Entity):
             bucket=bucket,
             key=key,
             size=size,
-            time=time,
+            created=created,
         )
 
 

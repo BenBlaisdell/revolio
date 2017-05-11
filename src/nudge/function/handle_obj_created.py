@@ -9,25 +9,16 @@ class HandleObjectCreated:
         self._batch_srv = batch_srv
         self._elem_srv = elem_srv
 
-    def __call__(self, bucket, key, size, time):
+    def __call__(self, bucket, key, **kwargs):
         return [
-            self._handle_matching_sub(sub, bucket, key, size, time)
+            self._handle_matching_sub(sub, bucket=bucket, key=key, **kwargs)
             for sub in self._sub_srv.find_matching_subscriptions(bucket, key)
         ]
 
-    def _handle_matching_sub(self, sub, bucket, key, size, time):
-        elem = Element.create(
-            sub_id=sub.id,
-            bucket=bucket,
-            key=key,
-            size=size,
-            time=time,
-        )
-
+    def _handle_matching_sub(self, sub, **kwargs):
+        elem = Element.create(sub_id=sub.id, **kwargs)
         self._session.add(elem.to_orm())
-        triggered = self._evaluate_sub(sub)
-
-        return elem, triggered
+        return elem, self._evaluate_sub(sub)
 
     def _evaluate_sub(self, sub):
         elems = self._elem_srv.get_sub_elems(sub.id)

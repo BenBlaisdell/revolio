@@ -65,7 +65,7 @@ def handle_object_created(ctx, request):
                 bucket=request['Bucket'],
                 key=request['Key'],
                 size=request['Size'],
-                time=request['Time'],
+                created=request['Created'],
             )
         },
     }
@@ -102,4 +102,4 @@ if __name__ == '__main__':
         }
     )
 
-    ctx.run()
+    ctx.app.run()

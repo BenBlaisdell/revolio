@@ -10,9 +10,6 @@ class EndpointProtocol(enum.Enum):
 
 class Endpoint(Serializable):
 
-    def serialize(self):
-        pass
-
     @classmethod
     def deserialize(cls, data):
         protocol = EndpointProtocol[data['Protocol']]
@@ -31,6 +28,14 @@ class SqsEndpoint(Endpoint):
     def __init__(self, queue_url):
         super(SqsEndpoint, self).__init__()
         self._queue_url = queue_url
+
+    def serialize(self):
+        return {
+            'Protocol': 'SQS',
+            'Parameters': {
+                'QueueUrl': self._queue_url,
+            },
+        }
 
     @classmethod
     def deserialize(cls, data):

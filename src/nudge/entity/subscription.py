@@ -16,21 +16,24 @@ class SubscriptionService:
         super(SubscriptionService, self).__init__()
         self._session = session
 
-    def deactivate(self, id):
+    def deactivate(self, sub_id):
         success = self._session \
             .query(SubscriptionOrm) \
-            .filter(SubscriptionOrm.id == id) \
+            .filter(SubscriptionOrm.id == sub_id) \
             .update(state=SubscriptionState.Inactive.value)
 
         if not success:
-            raise Exception('No subscription with id {}'.format(id))
+            raise Exception('No subscription with id {}'.format(sub_id))
 
     def find_matching_subscriptions(self, bucket, key):
-        self._session \
-            .query(SubscriptionOrm) \
-            .filter(SubscriptionOrm.bucket == bucket) \
-            .filter(sa.sql.expression.bindparam('k', key).startswith(SubscriptionOrm.prefix)) \
-            .all()
+        return [
+            Subscription.from_orm(orm)
+            for orm in self._session
+                .query(SubscriptionOrm)
+                .filter(SubscriptionOrm.bucket == bucket)
+                .filter(sa.sql.expression.bindparam('k', key).startswith(SubscriptionOrm.prefix))
+                .all()
+        ]
 
     def get_sub(self, sub_id):
         return self._session \

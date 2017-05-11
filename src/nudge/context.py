@@ -29,9 +29,6 @@ class NudgeContext:
             uri=db_uri,
         )
 
-    def run(self):
-        self._app.run()
-
     @property
     def app(self):
         return self._app
@@ -71,6 +68,11 @@ class NudgeContext:
     consume = rv.Inject(nudge.function.consume.Consume)
 
     unsubscribe = rv.Inject(nudge.function.unsubscribe.Unsubscribe)
+
+    # db
+
+    def recreate_tables(self):
+        nudge.db.recreate_tables(self.engine)
 
     # aws
 

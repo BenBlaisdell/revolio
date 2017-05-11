@@ -1,3 +1,5 @@
+import datetime as dt
+
 import json
 
 
@@ -9,7 +11,16 @@ class BatchService:
     def send_batch(self, sub, elems):
         msg = json.dumps({
             'SubscriptionId': sub.id,
-            'Elements': [elem.serialize() for elem in elems],
+            'Elements': [
+                {
+                    'Id': elem.id,
+                    'Bucket': elem.bucket,
+                    'Key': elem.key,
+                    'Size': elem.size,
+                    'Created': dt.datetime.strftime(elem.created, '%Y-%m-%d %H:%M:%S'),
+                }
+                for elem in elems
+            ],
         })
 
-        sub.endpoint.send_message(self._ctx, msg=msg)
+        sub.endpoint.send_message(ctx=self._ctx, msg=msg)

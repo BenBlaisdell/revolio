@@ -7,11 +7,9 @@ import nudge.function
 import nudge.context
 
 
-def create_app():
+def create_app(configs):
     app = flask.Flask('nudge')
-    app.config.update(
-        DEBUG=True,
-    )
+    app.config.update(**configs)
 
     for name, fn in _functions.items():
         _add_function(app, name, fn)
@@ -100,6 +98,9 @@ if __name__ == '__main__':
             u=os.environ['NUDGE_DB_USERNAME'],
             p=os.environ['NUDGE_DB_PASSWORD'],
         ),
+        app_configs={
+            'DUBUG': True,
+        }
     )
 
     ctx.app.run()

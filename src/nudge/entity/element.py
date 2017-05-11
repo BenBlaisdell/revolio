@@ -5,6 +5,12 @@ from nudge.entity.entity import Entity
 from nudge.orm import ElementOrm
 
 
+class ElementService:
+
+    def __init__(self, session):
+        self._session = session
+
+
 class Element(Entity):
 
     @property

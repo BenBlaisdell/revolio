@@ -5,7 +5,7 @@ from nudge.util import Serializable
 
 
 class EndpointProtocol(enum.Enum):
-    Sqs = 'Sqs'
+    SQS = 'SQS'
 
 
 class Endpoint(Serializable):
@@ -18,7 +18,7 @@ class Endpoint(Serializable):
         protocol = EndpointProtocol[data['Protocol']]
         params = data['Parameters']
 
-        if protocol == EndpointProtocol.Sqs:
+        if protocol == EndpointProtocol.SQS:
             return SqsEndpoint.deserialize(params)
 
     @abc.abstractmethod
@@ -28,10 +28,9 @@ class Endpoint(Serializable):
 
 class SqsEndpoint(Endpoint):
 
-    def __init__(self, ctx, queue_url):
+    def __init__(self, queue_url):
         super(SqsEndpoint, self).__init__()
         self._queue_url = queue_url
-        self._ctx = ctx
 
     @classmethod
     def deserialize(cls, data):

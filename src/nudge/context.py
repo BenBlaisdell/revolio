@@ -1,18 +1,15 @@
 import boto3
 from cached_property import cached_property
 
+import revolio as rv
+
 import nudge.app
 import nudge.db
-from nudge.batch import BatchService
-from nudge.entity.notification import NotificationService
-from nudge.entity.subscription import SubscriptionService
-from nudge.function import FunctionDirectory
-
-
-class ElementService:
-
-    def __init__(self, session):
-        self._session = session
+import nudge.batch
+import nudge.entity.notification
+import nudge.entity.subscription
+import nudge.entity.element
+import nudge.function
 
 
 class NudgeContext:
@@ -48,34 +45,20 @@ class NudgeContext:
         return self.db.engine
 
     @property
-    def functions(self):
-        return FunctionDirectory(
-            ctx=self,
-        )
+    def ctx(self):
+        return self
 
-    @property
-    def sub_srv(self):
-        return SubscriptionService(
-            session=self.db.session,
-        )
+    # inject
 
-    @property
-    def elem_srv(self):
-        return ElementService(
-            session=self.db.session,
-        )
+    functions = rv.Inject(nudge.function.FunctionDirectory)
 
-    @property
-    def nfn_srv(self):
-        return NotificationService(
-            session=self.db.session,
-        )
+    sub_srv = rv.Inject(nudge.entity.subscription.SubscriptionService)
 
-    @property
-    def batch_srv(self):
-        return BatchService(
-            ctx=self,
-        )
+    elem_srv = rv.Inject(nudge.entity.element.ElementService)
+
+    nfn_srv = rv.Inject(nudge.entity.notification.NotificationService)
+
+    batch_srv = rv.Inject(nudge.batch.BatchService)
 
     # aws
 

@@ -2,10 +2,10 @@ import flask_sqlalchemy
 from nudge.orm import EntityOrm
 
 
-def create_db(app, db_uri):
+def create_db(app, uri):
     app.config.update(
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
-        SQLALCHEMY_DATABASE_URI=db_uri,
+        SQLALCHEMY_DATABASE_URI=uri,
     )
 
     return flask_sqlalchemy.SQLAlchemy(app)

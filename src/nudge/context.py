@@ -8,28 +8,27 @@ from nudge.function import FunctionDirectory
 class NudgeContext:
 
     def __init__(self, db_uri, *, app_configs=None):
-        self._db_uri = db_uri
-        self._app_configs = app_configs or {}
-
-    @cached_property
-    def db_uri(self):
-        return self._db_uri
-
-    @cached_property
-    def app_configs(self):
-        return self._app_configs
-
-    @cached_property
-    def app(self):
-        return nudge.app.create_app(self, self.app_configs)
-
-    @cached_property
-    def db(self):
-        return nudge.db.create_db(
-            self.app,
-            self.db_uri,
+        self._app = nudge.app.create_app(
+            ctx=self,
+            configs=(app_configs or {}),
         )
 
-    @cached_property
+        self._db = nudge.db.create_db(
+            app=self._app,
+            uri=db_uri,
+        )
+
+    def run(self):
+        self._app.run()
+
+    @property
+    def app(self):
+        return self._app
+
+    @property
+    def db(self):
+        return self._db
+
+    @property
     def functions(self):
-        return FunctionDirectory(self)
+        return FunctionDirectory(self.db.session)

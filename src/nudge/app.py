@@ -102,4 +102,4 @@ if __name__ == '__main__':
         }
     )
 
-    ctx.app.run()
+    ctx.run()

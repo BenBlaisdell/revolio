@@ -8,6 +8,7 @@ setup(
     packages=find_packages('src'),
     package_dir={'': 'src'},
     install_requires=[
+        'boto3',
         'cached-property',
         'flask',
         'flask-sqlalchemy',

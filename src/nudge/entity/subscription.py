@@ -3,6 +3,7 @@ import uuid
 
 import marshmallow as mm
 import sqlalchemy as sa
+from nudge.endpoint import Endpoint
 
 from nudge.entity.entity import Entity
 from nudge.orm import SubscriptionOrm
@@ -30,6 +31,11 @@ class SubscriptionService:
             .filter(SubscriptionOrm.bucket == bucket) \
             .filter(sa.sql.expression.bindparam('k', key).startswith(SubscriptionOrm.prefix)) \
             .all()
+
+    def get_sub(self, sub_id):
+        return self._session \
+            .query(SubscriptionOrm) \
+            .get(sub_id)
 
 
 class Subscription(Entity):
@@ -71,7 +77,7 @@ class Subscription(Entity):
             prefix=prefix,
             regex=regex,
             threshold=threshold,
-            endpoint=SubscriptionEndpoint.deserialize(endpoint),
+            endpoint=Endpoint.deserialize(endpoint),
         )
 
     def __init__(self, id, state, bucket, prefix, regex, threshold, endpoint):
@@ -106,26 +112,13 @@ class Subscription(Entity):
             prefix=orm.prefix,
             regex=orm.data['regex'],
             threshold=orm.data['threshold'],
-            endpoint=SubscriptionEndpoint.deserialize(orm.data['endpoint']),
+            endpoint=Endpoint.deserialize(orm.data['endpoint']),
         )
 
 
 class SubscriptionState(enum.Enum):
     Active = 'Active'
     Inactive = 'Inactive'
-
-
-# endpoint
-
-
-class SubscriptionEndpoint(Serializable):
-
-    def serialize(self):
-        return {}  # todo
-
-    @classmethod
-    def deserialize(cls, data):
-        return SubscriptionEndpoint()  # todo
 
 
 # schema

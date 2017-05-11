@@ -1,8 +1,18 @@
+import boto3
 from cached_property import cached_property
 
 import nudge.app
 import nudge.db
+from nudge.batch import BatchService
+from nudge.entity.notification import NotificationService
+from nudge.entity.subscription import SubscriptionService
 from nudge.function import FunctionDirectory
+
+
+class ElementService:
+
+    def __init__(self, session):
+        self._session = session
 
 
 class NudgeContext:
@@ -30,5 +40,53 @@ class NudgeContext:
         return self._db
 
     @property
+    def session(self):
+        return self.db.session
+
+    @property
+    def engine(self):
+        return self.db.engine
+
+    @property
     def functions(self):
-        return FunctionDirectory(self.db.session)
+        return FunctionDirectory(
+            ctx=self,
+        )
+
+    @property
+    def sub_srv(self):
+        return SubscriptionService(
+            session=self.db.session,
+        )
+
+    @property
+    def elem_srv(self):
+        return ElementService(
+            session=self.db.session,
+        )
+
+    @property
+    def nfn_srv(self):
+        return NotificationService(
+            session=self.db.session,
+        )
+
+    @property
+    def batch_srv(self):
+        return BatchService(
+            ctx=self,
+        )
+
+    # aws
+
+    @cached_property
+    def sqs(self):
+        return boto3.client('sqs')
+
+    @cached_property
+    def sns(self):
+        return boto3.client('sns')
+
+    @cached_property
+    def s3(self):
+        return boto3.client('s3')

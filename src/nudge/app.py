@@ -40,7 +40,7 @@ def api_function(name):
 
 @api_function('Subscribe')
 def subscribe(ctx, request):
-    sub = ctx.functions.subscribe(
+    sub = ctx.subscribe(
         bucket=request['Bucket'],
         prefix=request['Prefix'],
         endpoint=request['Endpoint'],
@@ -61,7 +61,7 @@ def handle_object_created(ctx, request):
                 'ElementId': elem.id,
                 'Triggered': triggered,
             }
-            for elem, triggered in ctx.functions.handle_obj_created(
+            for elem, triggered in ctx.handle_obj_created(
                 bucket=request['Bucket'],
                 key=request['Key'],
                 size=request['Size'],
@@ -73,7 +73,7 @@ def handle_object_created(ctx, request):
 
 @api_function('Consume')
 def consume(ctx, request):
-    ctx.functions.consume(
+    ctx.consume(
         elem_ids=request['ElementIds'],
     )
 
@@ -82,7 +82,7 @@ def consume(ctx, request):
 
 @api_function('Unsubscribe')
 def unsubscribe(ctx, request):
-    ctx.functions.unsubscribe(
+    ctx.unsubscribe(
         sub_id=request['SubscriptionId'],
     )
 

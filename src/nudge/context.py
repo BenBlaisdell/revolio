@@ -10,6 +10,10 @@ import nudge.entity.notification
 import nudge.entity.subscription
 import nudge.entity.element
 import nudge.function
+import nudge.function.consume
+import nudge.function.handle_obj_created
+import nudge.function.subscribe
+import nudge.function.unsubscribe
 
 
 class NudgeContext:
@@ -50,8 +54,6 @@ class NudgeContext:
 
     # inject
 
-    functions = rv.Inject(nudge.function.FunctionDirectory)
-
     sub_srv = rv.Inject(nudge.entity.subscription.SubscriptionService)
 
     elem_srv = rv.Inject(nudge.entity.element.ElementService)
@@ -59,6 +61,16 @@ class NudgeContext:
     nfn_srv = rv.Inject(nudge.entity.notification.NotificationService)
 
     batch_srv = rv.Inject(nudge.batch.BatchService)
+
+    # functions
+
+    subscribe = rv.Inject(nudge.function.subscribe.Subscribe)
+
+    handle_obj_created = rv.Inject(nudge.function.handle_obj_created.HandleObjectCreated)
+
+    consume = rv.Inject(nudge.function.consume.Consume)
+
+    unsubscribe = rv.Inject(nudge.function.unsubscribe.Unsubscribe)
 
     # aws
 

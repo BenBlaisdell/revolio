@@ -32,9 +32,6 @@ class ElementService:
                 .all()
         ]
 
-    def mark_consumed(self, elem):
-        pass
-
 
 class Element(Entity):
 

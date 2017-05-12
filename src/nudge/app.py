@@ -108,12 +108,14 @@ def unsubscribe(ctx, request):
 
 if __name__ == '__main__':
     ctx = nudge.context.NudgeContext(
-        db_uri='postgresql://{u}:{p}@{e}:5432/{db}'.format(
-            e=os.environ['NUDGE_DB_ENDPOINT'],
-            db=os.environ['NUDGE_DB_NAME'],
-            u=os.environ['NUDGE_DB_USERNAME'],
-            p=os.environ['NUDGE_DB_PASSWORD'],
-        ),
+        # 's3://bblaisdell-ply-bucket/nudge-config.yaml',
+        's3://bblaisdell-ply-bucket/dummy-nudge-config.yaml',
+        # db_uri='postgresql://{u}:{p}@{e}:5432/{db}'.format(
+        #     e=os.environ['NUDGE_DB_ENDPOINT'],
+        #     db=os.environ['NUDGE_DB_NAME'],
+        #     u=os.environ['NUDGE_DB_USERNAME'],
+        #     p=os.environ['NUDGE_DB_PASSWORD'],
+        # ),
         flask_config={
             'DEBUG': True,
         }

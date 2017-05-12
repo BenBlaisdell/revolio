@@ -4,12 +4,12 @@ from cached_property import cached_property
 import revolio as rv
 
 import nudge.app
-import nudge.db
 import nudge.batch
+import nudge.config
 import nudge.db
+import nudge.entity.element
 import nudge.entity.notification
 import nudge.entity.subscription
-import nudge.entity.element
 import nudge.function
 import nudge.function.consume
 import nudge.function.handle_obj_created
@@ -20,12 +20,10 @@ import nudge.log
 
 class NudgeContext:
 
-    def __init__(self, db_uri, *, flask_config=None):
-        self._db_uri = db_uri
+    def __init__(self, config_s3_uri, *, flask_config=None):
+        self._config_s3_uri = config_s3_uri
         self._flask_config = flask_config or {}
 
-        self.db = nudge.db.Database(db_uri)
-        self.app = nudge.app.App(self, flask_config)
         self.db.init(self.app.flask_app)
 
     @property
@@ -34,13 +32,28 @@ class NudgeContext:
 
     @property
     def db_uri(self):
-        return self._db_uri
+        return 'postgresql://{u}:{p}@{e}:5432/{db}'.format(
+            e=self.config['Database']['Endpoint'],
+            db=self.config['Database']['Name'],
+            u=self.config['Database']['Username'],
+            p=self.config['Database']['Password'],
+        )
 
     @property
     def ctx(self):
         return self
 
+    @property
+    def config_s3_uri(self):
+        return self._config_s3_uri
+
     # inject
+
+    config = rv.Inject(nudge.config.ConfigService)
+
+    db = rv.Inject(nudge.db.Database)
+
+    app = rv.Inject(nudge.app.App)
 
     sub_srv = rv.Inject(nudge.entity.subscription.SubscriptionService)
 

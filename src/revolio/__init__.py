@@ -8,10 +8,13 @@ class Inject:
 
     def __get__(self, instance, owner):
         params = inspect.signature(self._callable).parameters.values()
-        return self._callable(**{
-            param.name: getattr(instance, param.name)
-            for param in params
-        })
+        try:
+            return self._callable(**{
+                param.name: getattr(instance, param.name)
+                for param in params
+            })
+        except Exception as e:
+            raise Exception('Failed to inject dependencies for {}'.format(str(self._callable))) from e
 
 
 def inject(func):

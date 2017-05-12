@@ -10,10 +10,13 @@ class HandleObjectCreated:
         self._elem_srv = elem_srv
 
     def __call__(self, bucket, key, **kwargs):
-        return [
+        result = [
             self._handle_matching_sub(sub, bucket=bucket, key=key, **kwargs)
             for sub in self._sub_srv.find_matching_subscriptions(bucket, key)
         ]
+
+        self._session.commit()
+        return result
 
     def _handle_matching_sub(self, sub, **kwargs):
         elem = Element.create(sub_id=sub.id, **kwargs)

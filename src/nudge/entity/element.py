@@ -11,14 +11,25 @@ class ElementService:
     def __init__(self, session):
         self._session = session
 
-    def get_sub_elems(self, sub_id):
-        return [Element.from_orm(orm) for orm in self._get_sub_elems(sub_id)]
+    def get_elements(self, elem_ids):
+        return [
+            Element.from_orm(orm)
+            for orm in self._session
+                .query(ElementOrm)
+                .filter()
+        ]
 
-    def _get_sub_elems(self, sub_id):
-        return self._session \
-            .query(ElementOrm) \
-            .filter(ElementOrm.sub_id == sub_id) \
-            .all()
+    def get_sub_elems(self, sub_id):
+        return [
+            Element.from_orm(orm)
+            for orm in self._session
+                .query(ElementOrm)
+                .filter(ElementOrm.sub_id == sub_id)
+                .all()
+        ]
+
+    def mark_consumed(self, elem):
+        pass
 
 
 class Element(Entity):
@@ -90,7 +101,7 @@ class Element(Entity):
     def create(sub_id, bucket, key, size, created):
         return Element(
             id=str(uuid.uuid4()),
-            state=ElementState.UNCONSUMED,
+            state=ElementState.Unconsumed,
             sub_id=sub_id,
             bucket=bucket,
             key=key,
@@ -100,6 +111,6 @@ class Element(Entity):
 
 
 class ElementState(enum.Enum):
-    UNCONSUMED = 'UNCONSUMED'
-    SENT = 'SENT'
-    CONSUMED = 'CONSUMED'
+    Unconsumed = 'Unconsumed'
+    Sent = 'Sent'
+    Consumed = 'Consumed'

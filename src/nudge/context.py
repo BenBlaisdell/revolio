@@ -14,6 +14,7 @@ import nudge.function.consume
 import nudge.function.handle_obj_created
 import nudge.function.subscribe
 import nudge.function.unsubscribe
+import nudge.log
 
 
 class NudgeContext:
@@ -59,6 +60,8 @@ class NudgeContext:
 
     batch_srv = rv.Inject(nudge.batch.BatchService)
 
+    log = rv.Inject(nudge.log.LogService)
+
     # functions
 
     subscribe = rv.Inject(nudge.function.subscribe.Subscribe)
@@ -68,6 +71,7 @@ class NudgeContext:
     consume = rv.Inject(nudge.function.consume.Consume)
 
     unsubscribe = rv.Inject(nudge.function.unsubscribe.Unsubscribe)
+
 
     # db
 

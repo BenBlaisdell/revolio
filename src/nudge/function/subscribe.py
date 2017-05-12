@@ -15,7 +15,7 @@ class Subscribe:
             threshold=threshold,
         )
 
-        self._session.add(sub.to_orm())
+        self._session.add(sub.orm)
         self._session.commit()
 
         return sub

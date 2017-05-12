@@ -12,19 +12,23 @@ class ElementService:
         self._session = session
 
     def get_elements(self, elem_ids):
-        return [
-            Element.from_orm(orm)
+        elems = [
+            Element(orm)
             for orm in self._session
                 .query(ElementOrm)
-                .filter()
+                .filter(ElementOrm.id.in_(elem_ids))
+                .all()
         ]
 
-    def get_sub_elems(self, sub_id):
+        assert len(elems) == len(elem_ids)
+        return elems
+
+    def get_sub_elems(self, sub):
         return [
-            Element.from_orm(orm)
+            Element(orm)
             for orm in self._session
                 .query(ElementOrm)
-                .filter(ElementOrm.sub_id == sub_id)
+                .filter(ElementOrm.sub_id == sub.id)
                 .all()
         ]
 
@@ -32,85 +36,59 @@ class ElementService:
         pass
 
 
-class Element(Entity):
-
-    @property
-    def id(self):
-        return self._id
-
-    @property
-    def state(self):
-        return self._state
-
-    @property
-    def sub_id(self):
-        return self._sub_id
-
-    @property
-    def bucket(self):
-        return self._bucket
-
-    @property
-    def key(self):
-        return self._key
-
-    @property
-    def size(self):
-        return self._size
-
-    @property
-    def created(self):
-        return self._created
-
-    def __init__(self, id, state, sub_id, bucket, key, size, created):
-        super(Element, self).__init__()
-        self._id = id
-        self._state = state
-        self._sub_id = sub_id
-        self._bucket = bucket
-        self._key = key
-        self._size = size
-        self._created = created
-
-    def to_orm(self):
-        return ElementOrm(
-            id=self._id,
-            state=self._state.value,
-            sub_id=self._sub_id,
-            data=dict(
-                bucket=self._bucket,
-                key=self._key,
-                size=self._size,
-                created=self._created,
-            ),
-        )
-
-    @staticmethod
-    def from_orm(orm):
-        return Element(
-            id=orm.id,
-            state=ElementState[orm.state],
-            sub_id=orm.sub_id,
-            bucket=orm.data['bucket'],
-            key=orm.data['key'],
-            size=int(orm.data['size']),
-            created=dt.datetime.strptime(orm.data['created'], '%Y-%m-%d %H:%M:%S'),
-        )
-
-    @staticmethod
-    def create(sub_id, bucket, key, size, created):
-        return Element(
-            id=str(uuid.uuid4()),
-            state=ElementState.Unconsumed,
-            sub_id=sub_id,
-            bucket=bucket,
-            key=key,
-            size=size,
-            created=created,
-        )
-
-
 class ElementState(enum.Enum):
     Unconsumed = 'Unconsumed'
     Sent = 'Sent'
     Consumed = 'Consumed'
+
+
+class Element(Entity):
+
+    State = ElementState
+
+    @property
+    def id(self):
+        return self._orm.id
+
+    @property
+    def state(self):
+        return ElementState[self._orm.state]
+
+    @state.setter
+    def state(self, state):
+        assert isinstance(state, ElementState)
+        self._orm.state = state.value
+
+    @property
+    def sub_id(self):
+        return self._orm.sub_id
+
+    @property
+    def bucket(self):
+        return self._orm.data['bucket']
+
+    @property
+    def key(self):
+        return self._orm.data['key']
+
+    @property
+    def size(self):
+        return int(self._orm.data['size'])
+
+    @property
+    def created(self):
+        return dt.datetime.strptime(self._orm.data['created'], '%Y-%m-%d %H:%M:%S')
+
+    @staticmethod
+    def create(sub_id, bucket, key, size, created):
+        return Element(ElementOrm(
+            id=str(uuid.uuid4()),
+            state=ElementState.Unconsumed.value,
+            sub_id=sub_id,
+            data=dict(
+                bucket=bucket,
+                key=key,
+                size=size,
+                created=created,
+            )
+        ))

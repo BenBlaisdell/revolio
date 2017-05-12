@@ -20,11 +20,11 @@ class HandleObjectCreated:
 
     def _handle_matching_sub(self, sub, **kwargs):
         elem = Element.create(sub_id=sub.id, **kwargs)
-        self._session.add(elem.to_orm())
+        self._session.add(elem.orm)
         return elem, self._evaluate_sub(sub)
 
     def _evaluate_sub(self, sub):
-        elems = self._elem_srv.get_sub_elems(sub.id)
+        elems = self._elem_srv.get_sub_elems(sub)
         if _batch_size(elems) >= sub.threshold:
             self._batch_srv.send_batch(sub, elems)
             return True
@@ -33,4 +33,4 @@ class HandleObjectCreated:
 
 
 def _batch_size(elems):
-    return sum(map(lambda e: e.size, elems))
+    return sum(e.size for e in elems)

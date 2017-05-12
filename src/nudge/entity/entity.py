@@ -3,22 +3,16 @@ import abc
 from nudge.orm import EntityOrm
 
 
-class Entity(metaclass=abc.ABCMeta):
+class Entity:
 
-    def __init__(self):
+    def __init__(self, orm):
         super(Entity, self).__init__()
-
-    @abc.abstractmethod
-    def to_orm(self):
-        return EntityOrm()
-
-    @staticmethod
-    @abc.abstractmethod
-    def from_orm(orm):
-        return Entity()
+        self._orm = orm
 
     @abc.abstractmethod
     def create(self, *args, **kwargs):
-        return Entity()
+        return Entity(EntityOrm(*args, **kwargs))
 
-
+    @property
+    def orm(self):
+        return self._orm

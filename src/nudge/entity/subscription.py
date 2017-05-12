@@ -1,4 +1,5 @@
 import enum
+import re
 import uuid
 
 import marshmallow as mm
@@ -16,18 +17,19 @@ class SubscriptionService:
         super(SubscriptionService, self).__init__()
         self._session = session
 
-    def deactivate(self, sub_id):
-        success = self._session \
+    def get_subscription(self, sub_id):
+        orm = self._session \
             .query(SubscriptionOrm) \
-            .filter(SubscriptionOrm.id == sub_id) \
-            .update(state=SubscriptionState.Inactive.value)
+            .get(sub_id)
 
-        if not success:
+        if orm is None:
             raise Exception('No subscription with id {}'.format(sub_id))
+
+        return Subscription(orm)
 
     def find_matching_subscriptions(self, bucket, key):
         return [
-            Subscription.from_orm(orm)
+            Subscription(orm)
             for orm in self._session
                 .query(SubscriptionOrm)
                 .filter(SubscriptionOrm.bucket == bucket)
@@ -35,88 +37,55 @@ class SubscriptionService:
                 .all()
         ]
 
-    def get_sub(self, sub_id):
-        return self._session \
-            .query(SubscriptionOrm) \
-            .get(sub_id)
-
 
 class Subscription(Entity):
 
     @property
     def id(self):
-        return self._id
+        return self._orm.id
 
     @property
     def state(self):
-        return self._state
+        return SubscriptionState[self._orm.state]
+
+    @state.setter
+    def state(self, state):
+        assert isinstance(state, SubscriptionState)
+        self._orm.state = state.value
 
     @property
     def bucket(self):
-        return self._bucket
+        return self._orm.bucket
 
     @property
     def prefix(self):
-        return self._prefix
+        return self._orm.prefix
 
     @property
     def regex(self):
-        return self._regex
+        return re.compile(self._orm.data['regex'])
 
     @property
     def threshold(self):
-        return self._threshold
+        return self._orm.data['threshold']
 
     @property
     def endpoint(self):
-        return self._endpoint
+        return Endpoint.deserialize(self._orm.data['endpoint'])
 
     @staticmethod
     def create(bucket, endpoint, *, prefix=None, regex=None, threshold=0):
-        return Subscription(
+        return Subscription(SubscriptionOrm(
             id=str(uuid.uuid4()),
-            state=SubscriptionState.Active,
+            state=SubscriptionState.Active.value,
             bucket=bucket,
             prefix=prefix,
-            regex=regex,
-            threshold=threshold,
-            endpoint=Endpoint.deserialize(endpoint),
-        )
-
-    def __init__(self, id, state, bucket, prefix, regex, threshold, endpoint):
-        super(Subscription, self).__init__()
-        self._id = id
-        self._state = state
-        self._bucket = bucket
-        self._prefix = prefix
-        self._regex = regex
-        self._threshold = threshold
-        self._endpoint = endpoint
-
-    def to_orm(self):
-        return SubscriptionOrm(
-            id=self._id,
-            state=self._state.value,
-            bucket=self._bucket,
-            prefix=self._prefix,
             data=dict(
-                regex=self._regex,
-                threshold=self._threshold,
-                endpoint=self._endpoint.serialize(),
+                regex=regex,
+                threshold=threshold,
+                endpoint=endpoint,
             )
-        )
-
-    @staticmethod
-    def from_orm(orm):
-        return Subscription(
-            id=orm.id,
-            state=orm.state,
-            bucket=orm.bucket,
-            prefix=orm.prefix,
-            regex=orm.data['regex'],
-            threshold=orm.data['threshold'],
-            endpoint=Endpoint.deserialize(orm.data['endpoint']),
-        )
+        ))
 
 
 class SubscriptionState(enum.Enum):

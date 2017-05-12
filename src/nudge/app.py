@@ -109,7 +109,7 @@ def unsubscribe(ctx, request):
 if __name__ == '__main__':
     ctx = nudge.context.NudgeContext(
         # 's3://bblaisdell-ply-bucket/nudge-config.yaml',
-        's3://bblaisdell-ply-bucket/dummy-nudge-config.yaml',
+        's3://bblaisdell-ply-bucket/nudge-config.yaml',
         # db_uri='postgresql://{u}:{p}@{e}:5432/{db}'.format(
         #     e=os.environ['NUDGE_DB_ENDPOINT'],
         #     db=os.environ['NUDGE_DB_NAME'],

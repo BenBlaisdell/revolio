@@ -1,4 +1,5 @@
 import boto3
+import botocore.client
 from cached_property import cached_property
 
 import revolio as rv
@@ -24,6 +25,8 @@ class NudgeContext:
         self._config_s3_uri = config_s3_uri
         self._flask_config = flask_config or {}
 
+        self.app = nudge.app.App(self, self.flask_config)
+        self.db = nudge.db.Database(self.log, self.db_uri)
         self.db.init(self.app.flask_app)
 
     @property
@@ -50,10 +53,6 @@ class NudgeContext:
     # inject
 
     config = rv.Inject(nudge.config.ConfigService)
-
-    db = rv.Inject(nudge.db.Database)
-
-    app = rv.Inject(nudge.app.App)
 
     sub_srv = rv.Inject(nudge.entity.subscription.SubscriptionService)
 
@@ -93,4 +92,7 @@ class NudgeContext:
 
     @cached_property
     def s3(self):
-        return boto3.client('s3')
+        return boto3.client(
+            service_name='s3',
+            config=botocore.client.Config(signature_version='s3v4'),
+        )

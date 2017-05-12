@@ -44,13 +44,17 @@ class Subscription(Entity):
     def id(self):
         return self._orm.id
 
+    class State(enum.Enum):
+        Active = 'Active'
+        Inactive = 'Inactive'
+
     @property
     def state(self):
-        return SubscriptionState[self._orm.state]
+        return Subscription.State[self._orm.state]
 
     @state.setter
     def state(self, state):
-        assert isinstance(state, SubscriptionState)
+        assert isinstance(state, Subscription.State)
         self._orm.state = state.value
 
     @property
@@ -77,7 +81,7 @@ class Subscription(Entity):
     def create(bucket, endpoint, *, prefix=None, regex=None, threshold=0):
         return Subscription(SubscriptionOrm(
             id=str(uuid.uuid4()),
-            state=SubscriptionState.Active.value,
+            state=Subscription.State.Active.value,
             bucket=bucket,
             prefix=prefix,
             data=dict(
@@ -86,11 +90,6 @@ class Subscription(Entity):
                 endpoint=endpoint,
             )
         ))
-
-
-class SubscriptionState(enum.Enum):
-    Active = 'Active'
-    Inactive = 'Inactive'
 
 
 # schema

@@ -36,27 +36,24 @@ class ElementService:
         pass
 
 
-class ElementState(enum.Enum):
-    Unconsumed = 'Unconsumed'
-    Sent = 'Sent'
-    Consumed = 'Consumed'
-
-
 class Element(Entity):
-
-    State = ElementState
 
     @property
     def id(self):
         return self._orm.id
 
+    class State(enum.Enum):
+        Unconsumed = 'Unconsumed'
+        Sent = 'Sent'
+        Consumed = 'Consumed'
+
     @property
     def state(self):
-        return ElementState[self._orm.state]
+        return Element.State[self._orm.state]
 
     @state.setter
     def state(self, state):
-        assert isinstance(state, ElementState)
+        assert isinstance(state, Element.State)
         self._orm.state = state.value
 
     @property
@@ -83,7 +80,7 @@ class Element(Entity):
     def create(sub_id, bucket, key, size, created):
         return Element(ElementOrm(
             id=str(uuid.uuid4()),
-            state=ElementState.Unconsumed.value,
+            state=Element.State.Unconsumed.value,
             sub_id=sub_id,
             data=dict(
                 bucket=bucket,

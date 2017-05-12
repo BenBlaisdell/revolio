@@ -1,4 +1,4 @@
-from nudge.entity.subscription import SubscriptionState
+from nudge.entity.subscription import Subscription
 
 
 class Unsubscribe:
@@ -9,6 +9,6 @@ class Unsubscribe:
 
     def __call__(self, sub_id):
         sub = self._sub_srv.get_subscription(sub_id)
-        assert sub.state == SubscriptionState.Active
-        sub.state = SubscriptionState.Inactive
+        assert sub.state == Subscription.State.Active
+        sub.state = Subscription.State.Inactive
         self._db.commit()

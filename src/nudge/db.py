@@ -42,3 +42,6 @@ class Database:
 
     def query(self, *args, **kwargs):
         return self._session.query(*args, **kwargs)
+
+    def flush(self):
+        self._session.flush()

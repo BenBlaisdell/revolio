@@ -1,14 +1,21 @@
 import datetime as dt
-
 import json
+
+from nudge.entity.element import Element
 
 
 class BatchService:
 
-    def __init__(self, ctx):
+    def __init__(self, ctx, db):
         self._ctx = ctx
+        self._db = db
 
     def send_batch(self, sub, elems):
+        for elem in elems:
+            elem.state = Element.State.Sent
+
+        self._db.flush()
+
         msg = json.dumps({
             'SubscriptionId': sub.id,
             'Elements': [

@@ -8,13 +8,13 @@ from nudge.orm import ElementOrm
 
 class ElementService:
 
-    def __init__(self, session):
-        self._session = session
+    def __init__(self, db):
+        self._db = db
 
     def get_elements(self, elem_ids):
         elems = [
             Element(orm)
-            for orm in self._session
+            for orm in self._db
                 .query(ElementOrm)
                 .filter(ElementOrm.id.in_(elem_ids))
                 .all()
@@ -26,7 +26,7 @@ class ElementService:
     def get_sub_elems(self, sub):
         return [
             Element(orm)
-            for orm in self._session
+            for orm in self._db
                 .query(ElementOrm)
                 .filter(ElementOrm.sub_id == sub.id)
                 .all()

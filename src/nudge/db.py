@@ -2,23 +2,43 @@ import flask_sqlalchemy
 from nudge.orm import EntityOrm
 
 
-def create_db(app, uri):
-    app.config.update(
-        SQLALCHEMY_TRACK_MODIFICATIONS=False,
-        SQLALCHEMY_DATABASE_URI=uri,
-    )
+class Database:
 
-    return flask_sqlalchemy.SQLAlchemy(app)
+    def __init__(self, db_uri):
+        self._db_uri = db_uri
+        self._db = flask_sqlalchemy.SQLAlchemy()
 
+    @property
+    def _session(self):
+        return self._db.session
 
-def recreate_tables(engine):
-    drop_tables(engine)
-    create_tables(engine)
+    @property
+    def _engine(self):
+        return self._db.engine
 
+    def init(self, app):
+        app.config.update(
+            SQLALCHEMY_TRACK_MODIFICATIONS=False,
+            SQLALCHEMY_DATABASE_URI=self._db_uri,
+        )
 
-def create_tables(engine):
-    EntityOrm.metadata.create_all(bind=engine)
+        self._db.init_app(app)
 
+    def recreate_tables(self):
+        self.drop_tables()
+        self.create_tables()
 
-def drop_tables(engine):
-    EntityOrm.metadata.create_all(bind=engine)
+    def create_tables(self):
+        EntityOrm.metadata.create_all(bind=self._engine)
+
+    def drop_tables(self):
+        EntityOrm.metadata.create_all(bind=self._engine)
+
+    def add(self, entity):
+        self._session.add(entity.orm)
+
+    def commit(self):
+        self._session.commit()
+
+    def query(self, *args, **kwargs):
+        return self._session.query(*args, **kwargs)

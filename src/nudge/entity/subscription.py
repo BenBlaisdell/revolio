@@ -13,12 +13,12 @@ from nudge.util import Serializable
 
 class SubscriptionService:
 
-    def __init__(self, session):
+    def __init__(self, db):
         super(SubscriptionService, self).__init__()
-        self._session = session
+        self._db = db
 
     def get_subscription(self, sub_id):
-        orm = self._session \
+        orm = self._db \
             .query(SubscriptionOrm) \
             .get(sub_id)
 
@@ -30,7 +30,7 @@ class SubscriptionService:
     def find_matching_subscriptions(self, bucket, key):
         return [
             Subscription(orm)
-            for orm in self._session
+            for orm in self._db
                 .query(SubscriptionOrm)
                 .filter(SubscriptionOrm.bucket == bucket)
                 .filter(sa.sql.expression.bindparam('k', key).startswith(SubscriptionOrm.prefix))

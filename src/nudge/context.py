@@ -6,6 +6,7 @@ import revolio as rv
 import nudge.app
 import nudge.db
 import nudge.batch
+import nudge.db
 import nudge.entity.notification
 import nudge.entity.subscription
 import nudge.entity.element
@@ -19,32 +20,21 @@ import nudge.log
 
 class NudgeContext:
 
-    def __init__(self, db_uri, *, app_configs=None):
-        self._app = nudge.app.create_app(
-            ctx=self,
-            configs=(app_configs or {}),
-        )
+    def __init__(self, db_uri, *, flask_config=None):
+        self._db_uri = db_uri
+        self._flask_config = flask_config or {}
 
-        self._db = nudge.db.create_db(
-            app=self._app,
-            uri=db_uri,
-        )
+        self.db = nudge.db.Database(db_uri)
+        self.app = nudge.app.App(self, flask_config)
+        self.db.init(self.app.flask_app)
 
     @property
-    def app(self):
-        return self._app
+    def flask_config(self):
+        return self._flask_config
 
     @property
-    def db(self):
-        return self._db
-
-    @property
-    def session(self):
-        return self.db.session
-
-    @property
-    def engine(self):
-        return self.db.engine
+    def db_uri(self):
+        return self._db_uri
 
     @property
     def ctx(self):
@@ -76,7 +66,7 @@ class NudgeContext:
     # db
 
     def recreate_tables(self):
-        nudge.db.recreate_tables(self.engine)
+        raise NotImplementedError()
 
     # aws
 

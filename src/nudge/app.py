@@ -6,9 +6,26 @@ import flask
 import nudge.context
 
 
-def create_app(ctx, configs):
+class App:
+
+    def __init__(self, ctx, flask_config):
+        self._app = _create_app(ctx, flask_config)
+
+    @property
+    def config(self):
+        return self._app.config
+
+    def run(self):
+        self._app.run()
+
+    @property
+    def flask_app(self):
+        return self._app
+
+
+def _create_app(ctx, config):
     app = flask.Flask('nudge')
-    app.config.update(**configs)
+    app.config.update(**config)
 
     for name, fn in _functions.items():
         _add_function(app, name, fn, ctx)
@@ -97,7 +114,7 @@ if __name__ == '__main__':
             u=os.environ['NUDGE_DB_USERNAME'],
             p=os.environ['NUDGE_DB_PASSWORD'],
         ),
-        app_configs={
+        flask_config={
             'DEBUG': True,
         }
     )

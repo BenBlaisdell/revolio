@@ -15,6 +15,7 @@ packaging==16.8
 psycopg2==2.7.1
 pyparsing==2.2.0
 python-dateutil==2.6.0
+requests==2.14.2
 s3transfer==0.1.10
 six==1.10.0
 SQLAlchemy==1.1.9

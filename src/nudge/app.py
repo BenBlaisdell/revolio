@@ -4,12 +4,15 @@ import os
 import flask
 
 import nudge.context
+from nudge import util
+from nudge.endpoint import Endpoint
 
 
 class App:
 
-    def __init__(self, ctx, flask_config, db):
-        self._app = _create_app(ctx, flask_config)
+    def __init__(self, ctx, flask_config, db, log):
+        self._log = log
+        self._app = self._create_app(ctx, flask_config)
         db.init_app(self._app)
 
     @property
@@ -23,45 +26,60 @@ class App:
     def flask_app(self):
         return self._app
 
+    def _create_app(self, ctx, config):
+        app = flask.Flask('nudge')
+        app.config.update(**config)
 
-def _create_app(ctx, config):
-    app = flask.Flask('nudge')
-    app.config.update(**config)
+        for f in _api_functions:
+            endpoint = '/api/1/call/{}/'.format(f.name)
+            self._log.info('Adding endpoint: {}'.format(endpoint))
+            app.add_url_rule(
+                endpoint,
+                f.name,
+                lambda: json.dumps(f(ctx, flask.request.get_json(force=True))),
+                methods=['POST'],
+            )
 
-    for name, fn in _functions.items():
-        _add_function(app, name, fn, ctx)
-
-    return app
-
-
-def _add_function(app, name, fn, ctx):
-    app.add_url_rule(
-        '/api/1/call/{}/'.format(name),
-        name,
-        lambda: json.dumps(fn(ctx, flask.request.get_json(force=True))),
-        methods=['POST'],
-    )
+        return app
 
 
-_functions = {}
+_api_functions = []
 
 
-def api_function(name):
+class ApiFunction:
+
+    @property
+    def name(self):
+        return self._name
+
+    def __init__(self, name, handler):
+        self._name = name
+        self._handler = handler
+
+    def __call__(self, ctx, request):
+        result = self._handler(ctx, request)
+        return result if (result is not None) else {'Message': 'Success'}
+
+
+def api_function(name=None):
 
     def decorator(fn):
-        assert name not in _functions
-        _functions[name] = fn
+        _api_functions.append(ApiFunction(
+            name=name or util.snake_to_camel(fn.__name__),
+            handler=fn,
+        ))
+
         return fn
 
     return decorator
 
 
-@api_function('Subscribe')
+@api_function()
 def subscribe(ctx, request):
     sub = ctx.subscribe(
         bucket=request['Bucket'],
-        prefix=request['Prefix'],
-        endpoint=request['Endpoint'],
+        prefix=request.get('Prefix', None),
+        endpoint=Endpoint(),
         regex=request.get('Regex', None),
         threshold=request.get('Threshold', None),
     )
@@ -71,7 +89,7 @@ def subscribe(ctx, request):
     }
 
 
-@api_function('HandleObjectCreated')
+@api_function()
 def handle_object_created(ctx, request):
     return {
         'MatchingSubscriptions': {
@@ -89,22 +107,18 @@ def handle_object_created(ctx, request):
     }
 
 
-@api_function('Consume')
+@api_function()
 def consume(ctx, request):
     ctx.consume(
         elem_ids=request['ElementIds'],
     )
 
-    return {'Message': 'Success'}
 
-
-@api_function('Unsubscribe')
+@api_function()
 def unsubscribe(ctx, request):
     ctx.unsubscribe(
         sub_id=request['SubscriptionId'],
     )
-
-    return {'Message': 'Success'}
 
 
 if __name__ == '__main__':

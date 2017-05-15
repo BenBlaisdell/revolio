@@ -10,18 +10,18 @@ class HandleObjectCreated:
         self._elem_srv = elem_srv
         self._log = log
 
-    def __call__(self, bucket, key, **kwargs):
+    def __call__(self, bucket, key, size, created):
         self._log.info('Calling HandleObjectCreated')
         result = [
-            self._handle_matching_sub(sub, bucket=bucket, key=key, **kwargs)
+            self._handle_matching_sub(sub, bucket=bucket, key=key, size=size, created=created)
             for sub in self._sub_srv.find_matching_subscriptions(bucket, key)
         ]
 
         self._db.commit()
         return result
 
-    def _handle_matching_sub(self, sub, **kwargs):
-        elem = Element.create(sub_id=sub.id, **kwargs)
+    def _handle_matching_sub(self, sub, size, created):
+        elem = Element.create(sub_id=sub.id, size=size, created=created)
         self._db.add(elem)
         return elem, self._evaluate_sub(sub)
 

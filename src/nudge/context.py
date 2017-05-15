@@ -59,6 +59,7 @@ class NudgeContext:
             ctx=self,
             flask_config=self.flask_config,
             db=self.db,
+            log=self.log,
         )
 
     @cached_property

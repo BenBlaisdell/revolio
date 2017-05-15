@@ -5,7 +5,6 @@ from nudge.orm import EntityOrm
 class Database:
 
     def __init__(self, log, db_uri):
-        log.warning(db_uri)
         self._db_uri = db_uri
         self._db = flask_sqlalchemy.SQLAlchemy()
 

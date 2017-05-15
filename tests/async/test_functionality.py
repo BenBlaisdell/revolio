@@ -24,6 +24,7 @@ def nudge():
     with nudge.app.flask_app.app_context():
         nudge.db.recreate_tables()
         yield nudge
+        nudge.db.drop_tables()
 
 
 def test_functionality(nudge):

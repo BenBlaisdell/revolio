@@ -1,10 +1,23 @@
 import logging
+import logging.config
 
 
 class LogService:
 
     def __init__(self):
-        self._logger = logging.getLogger()
+        self._logger = logging.getLogger('nudge')
+        self._logger.setLevel(logging.DEBUG)
+
+        # console handler
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+
+        # formatter
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        ch.setFormatter(formatter)
+
+        # attach handlers
+        self._logger.addHandler(ch)
 
     def debug(self, msg):
         self._logger.debug(msg)

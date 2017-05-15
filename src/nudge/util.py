@@ -29,5 +29,9 @@ def camel_to_snake(name):
     return all_cap_re.sub(r'\1_\2', s1).lower()
 
 
+def snake_to_camel(name):
+    return ''.join(map(str.capitalize, name.split('_')))
+
+
 def success_response():
     return {'Message': 'Success'}

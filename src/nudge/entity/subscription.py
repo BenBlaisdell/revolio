@@ -28,7 +28,7 @@ class SubscriptionService:
         return Subscription(orm)
 
     def find_matching_subscriptions(self, bucket, key):
-        return [
+        subs = [
             Subscription(orm)
             for orm in self._db
                 .query(SubscriptionOrm)
@@ -36,6 +36,8 @@ class SubscriptionService:
                 .filter(sa.sql.expression.bindparam('k', key).startswith(SubscriptionOrm.prefix))
                 .all()
         ]
+
+        return filter(lambda s: s.matches(bucket, key), subs)
 
 
 class Subscription(Entity):
@@ -67,11 +69,12 @@ class Subscription(Entity):
 
     @property
     def regex(self):
-        return re.compile(self._orm.data['regex'])
+        r = self._orm.data.get('regex', None)
+        return re.compile(r'\A{}\Z'.format(r)) if (r is not None) else None
 
     @property
     def threshold(self):
-        return self._orm.data['threshold']
+        return int(self._orm.data['threshold'])
 
     @property
     def endpoint(self):
@@ -90,6 +93,13 @@ class Subscription(Entity):
                 endpoint=endpoint,
             )
         ))
+
+    def matches(self, bucket, key):
+        return all([
+            bucket == self.bucket,
+            key.startswith(self.prefix),
+            (self.regex is None) or self.regex.match(key[len(self.prefix):]),
+        ])
 
 
 # schema
@@ -137,4 +147,4 @@ class SubscriptionSchema(mm.Schema):
 
     @mm.post_load
     def return_subscription_entity(self, data):
-        return Subscription(**data)
+        return Subscription.create(**data)

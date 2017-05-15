@@ -74,12 +74,6 @@ class NudgeContext:
 
     unsubscribe = rv.Inject(nudge.function.unsubscribe.Unsubscribe)
 
-
-    # db
-
-    def recreate_tables(self):
-        raise NotImplementedError()
-
     # aws
 
     @cached_property

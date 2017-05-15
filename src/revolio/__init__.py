@@ -1,7 +1,7 @@
 import enum
 import inspect
 
-from cached_property import cached_property
+from werkzeug.utils import cached_property
 
 
 class Scope(enum.Enum):

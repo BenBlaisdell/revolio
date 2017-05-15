@@ -17,4 +17,7 @@ setup(
         'ruamel.yaml',
         'sqlalchemy',
     ],
+    tests_require=[
+        'pytest',
+    ],
 )

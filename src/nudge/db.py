@@ -17,7 +17,7 @@ class Database:
     def _engine(self):
         return self._db.engine
 
-    def init(self, app):
+    def init_app(self, app):
         app.config.update(
             SQLALCHEMY_TRACK_MODIFICATIONS=False,
             SQLALCHEMY_DATABASE_URI=self._db_uri,
@@ -33,7 +33,7 @@ class Database:
         EntityOrm.metadata.create_all(bind=self._engine)
 
     def drop_tables(self):
-        EntityOrm.metadata.create_all(bind=self._engine)
+        EntityOrm.metadata.drop_all(bind=self._engine)
 
     def add(self, entity):
         self._session.add(entity.orm)

@@ -8,8 +8,9 @@ import nudge.context
 
 class App:
 
-    def __init__(self, ctx, flask_config):
+    def __init__(self, ctx, flask_config, db):
         self._app = _create_app(ctx, flask_config)
+        db.init_app(self._app)
 
     @property
     def config(self):

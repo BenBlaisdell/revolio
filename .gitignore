@@ -1,5 +1,7 @@
 .idea/
 *.egg-info/
 *.pyc
+build/
+dist/
 .DS_Store
 .cache

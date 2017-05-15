@@ -9,74 +9,51 @@ from nudge.orm import NotificationOrm
 
 class NotificationService:
 
-    def __init__(self, session):
+    def __init__(self, db):
         super(NotificationService, self).__init__()
-        self._session = session
+        self._db = db
 
-    def get_covered_notifications(self, n):
-        return map(Notification.from_orm, self._get_covered_notifications(n))
+    def get_covered_notifications(self, nfn):
+        return [
+            Notification(orm)
+            for orm in self._db
+                .query(NotificationOrm)
+                .filter(NotificationOrm.bucket == nfn.bucket)
+                .filter(NotificationOrm.prefix.startswith(sa.sql.expression.bindparam('p', nfn.prefix)))
+                .all()
+        ]
 
-    def _get_covered_notifications(self, n):
-        return self._session \
-            .query(NotificationOrm) \
-            .filter(NotificationOrm.bucket == n.bucket) \
-            .filter(NotificationOrm.prefix.startswith(sa.sql.expression.bindparam('p', n.prefix))) \
-            .all()
-
-    def get_covering_notification(self, n):
-        covering = self._get_covering_notification(n)
-        return Notification.to_orm(covering) if covering is not None else None
-
-    def _get_covering_notification(self, n):
+    def get_covering_notification(self, nfn):
         try:
-            self._session \
+            orm = self._db \
                 .query(NotificationOrm) \
-                .filter(NotificationOrm.bucket == n.bucket) \
-                .filter(sa.sql.expression.bindparam('p', n.prefix).startswith(NotificationOrm.prefix)) \
+                .filter(NotificationOrm.bucket == nfn.bucket) \
+                .filter(sa.sql.expression.bindparam('p', nfn.prefix).startswith(NotificationOrm.prefix)) \
                 .one_or_none()
         except sa.orm.exc.MultipleResultsFound:
-            raise Exception('Found overlapping notifications covering {}'.format(n))
+            raise Exception('Found overlapping notifications covering {}'.format(nfn))
+
+        return Notification(orm) if (orm is not None) else None
 
 
 class Notification(Entity):
 
     @property
     def bucket(self):
-        return self._bucket
+        return self._orm.bucket
 
     @property
     def prefix(self):
-        return self._prefix
+        return self._orm.prefix
 
     @property
-    def c_id(self):
-        return self._c_id
+    def config_id(self):
+        return self._orm.config_id
 
     @staticmethod
-    def create(b, p):
-        return Notification(
-            bucket=b,
-            prefix=p,
-            c_id='nudge-subscription-{}'.format(str(uuid.uuid4())),
-        )
-
-    def to_orm(self):
-        return NotificationOrm(
-            bucket=self.bucket,
-            prefix=self.prefix,
-            c_id=self.c_id,
-        )
-
-    @staticmethod
-    def from_orm(orm):
-        return Notification(
-            bucket=orm.bucket,
-            prefix=orm.prefix,
-            c_id=orm.c_id,
-        )
-
-    def __init__(self, bucket, prefix, c_id):
-        super(Notification, self).__init__()
-        self._bucket = bucket
-        self._prefix = prefix
-        self._c_id = c_id
+    def create(bucket, prefix):
+        return Notification(NotificationOrm(
+            bucket=bucket,
+            prefix=prefix,
+            config_id='nudge-notification-{}'.format(str(uuid.uuid4())),
+        ))

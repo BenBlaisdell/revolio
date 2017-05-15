@@ -1,18 +1,25 @@
+import enum
 import inspect
 
+from werkzeug.utils import cached_property
 
-class Inject:
+
+class Scope(enum.Enum):
+    Global = 'Global'
+
+
+class Inject(cached_property):
 
     def __init__(self, callable):
-        self._callable = callable
+        super(Inject, self).__init__(lambda ctx: _init_injected(ctx, callable))
 
-    def __get__(self, instance, owner):
-        params = inspect.signature(self._callable).parameters.values()
-        return self._callable(**{
-            param.name: getattr(instance, param.name)
+
+def _init_injected(ctx, callable):
+    try:
+        params = inspect.signature(callable).parameters.values()
+        return callable(**{
+            param.name: getattr(ctx, param.name)
             for param in params
         })
-
-
-def inject(func):
-    return Inject(func)
+    except Exception as e:
+        raise Exception('Failed to inject dependencies for {}: {}'.format(str(callable), str(e))) from e

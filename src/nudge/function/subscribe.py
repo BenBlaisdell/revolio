@@ -3,10 +3,12 @@ from nudge.entity.subscription import Subscription
 
 class Subscribe:
 
-    def __init__(self, session):
-        self._session = session
+    def __init__(self, db, log):
+        self._db = db
+        self._log = log
 
     def __call__(self, bucket, endpoint, *, prefix=None, regex=None, threshold=0):
+        self._log.info('Calling Subscribe')
         sub = Subscription.create(
             bucket=bucket,
             endpoint=endpoint,
@@ -15,7 +17,7 @@ class Subscribe:
             threshold=threshold,
         )
 
-        self._session.add(sub.to_orm())
-        self._session.commit()
+        self._db.add(sub)
+        self._db.commit()
 
         return sub

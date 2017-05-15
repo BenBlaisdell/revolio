@@ -1,78 +1,138 @@
 import boto3
-from cached_property import cached_property
-
-import revolio as rv
+import botocore.client
+from werkzeug.utils import cached_property
 
 import nudge.app
-import nudge.db
 import nudge.batch
+import nudge.config
+import nudge.db
+import nudge.entity.element
 import nudge.entity.notification
 import nudge.entity.subscription
-import nudge.entity.element
 import nudge.function
 import nudge.function.consume
 import nudge.function.handle_obj_created
 import nudge.function.subscribe
 import nudge.function.unsubscribe
+import nudge.log
 
 
 class NudgeContext:
 
-    def __init__(self, db_uri, *, app_configs=None):
-        self._app = nudge.app.create_app(
-            ctx=self,
-            configs=(app_configs or {}),
+    def __init__(self, config_s3_uri, *, flask_config=None):
+        self._config_s3_uri = config_s3_uri
+        self._flask_config = flask_config or {}
+
+    @cached_property
+    def flask_config(self):
+        return self._flask_config
+
+    @cached_property
+    def db_uri(self):
+        return 'postgresql://{u}:{p}@{e}:5432/{db}'.format(
+            e=self.config['Database']['Endpoint'],
+            db=self.config['Database']['Name'],
+            u=self.config['Database']['Username'],
+            p=self.config['Database']['Password'],
         )
 
-        self._db = nudge.db.create_db(
-            app=self._app,
-            uri=db_uri,
-        )
-
-    @property
-    def app(self):
-        return self._app
-
-    @property
-    def db(self):
-        return self._db
-
-    @property
-    def session(self):
-        return self.db.session
-
-    @property
-    def engine(self):
-        return self.db.engine
-
-    @property
+    @cached_property
     def ctx(self):
         return self
 
+    @cached_property
+    def config_s3_uri(self):
+        return self._config_s3_uri
+
     # inject
 
-    sub_srv = rv.Inject(nudge.entity.subscription.SubscriptionService)
+    @cached_property
+    def db(self):
+        return nudge.db.Database(
+            log=self.log,
+            db_uri=self.db_uri,
+        )
 
-    elem_srv = rv.Inject(nudge.entity.element.ElementService)
+    @cached_property
+    def app(self):
+        return nudge.app.App(
+            ctx=self,
+            flask_config=self.flask_config,
+            db=self.db,
+        )
 
-    nfn_srv = rv.Inject(nudge.entity.notification.NotificationService)
+    @cached_property
+    def config(self):
+        return nudge.config.ConfigService(
+            log=self.log,
+            s3=self.s3,
+            config_s3_uri=self.config_s3_uri,
+        )
 
-    batch_srv = rv.Inject(nudge.batch.BatchService)
+    @cached_property
+    def sub_srv(self):
+        return nudge.entity.subscription.SubscriptionService(
+            db=self.db,
+        )
+
+
+    @cached_property
+    def elem_srv(self):
+        return nudge.entity.element.ElementService(
+            db=self.db,
+        )
+
+    @cached_property
+    def nfn_srv(self):
+        return nudge.entity.notification.NotificationService(
+            db=self.db,
+        )
+
+    @cached_property
+    def batch_srv(self):
+        return nudge.batch.BatchService(
+            ctx=self,
+            db=self.db,
+        )
+
+    @cached_property
+    def log(self):
+        return nudge.log.LogService()
 
     # functions
 
-    subscribe = rv.Inject(nudge.function.subscribe.Subscribe)
+    @cached_property
+    def subscribe(self):
+        return nudge.function.subscribe.Subscribe(
+            db=self.db,
+            log=self.log,
+        )
 
-    handle_obj_created = rv.Inject(nudge.function.handle_obj_created.HandleObjectCreated)
+    @cached_property
+    def handle_obj_created(self):
+        return nudge.function.handle_obj_created.HandleObjectCreated(
+            db=self.db,
+            sub_srv=self.sub_srv,
+            batch_srv=self.batch_srv,
+            elem_srv=self.elem_srv,
+            log=self.log,
+        )
 
-    consume = rv.Inject(nudge.function.consume.Consume)
+    @cached_property
+    def consume(self):
+        return nudge.function.consume.Consume(
+            log=self.log,
+            elem_srv=self.elem_srv,
+            db=self.db,
+        )
 
-    unsubscribe = rv.Inject(nudge.function.unsubscribe.Unsubscribe)
-
-    # db
-
-    def recreate_tables(self):
-        nudge.db.recreate_tables(self.engine)
+    @cached_property
+    def unsubscribe(self):
+        return nudge.function.unsubscribe.Unsubscribe(
+            db=self.db,
+            sub_srv=self.sub_srv,
+            log=self.log,
+        )
 
     # aws
 
@@ -86,4 +146,7 @@ class NudgeContext:
 
     @cached_property
     def s3(self):
-        return boto3.client('s3')
+        return boto3.client(
+            service_name='s3',
+            config=botocore.client.Config(signature_version='s3v4'),
+        )

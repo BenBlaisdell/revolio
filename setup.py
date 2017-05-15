@@ -14,6 +14,10 @@ setup(
         'flask-sqlalchemy',
         'marshmallow',
         'psycopg2',
+        'ruamel.yaml',
         'sqlalchemy',
+    ],
+    tests_require=[
+        'pytest',
     ],
 )

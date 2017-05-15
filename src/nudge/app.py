@@ -6,9 +6,27 @@ import flask
 import nudge.context
 
 
-def create_app(ctx, configs):
+class App:
+
+    def __init__(self, ctx, flask_config, db):
+        self._app = _create_app(ctx, flask_config)
+        db.init_app(self._app)
+
+    @property
+    def config(self):
+        return self._app.config
+
+    def run(self):
+        self._app.run()
+
+    @property
+    def flask_app(self):
+        return self._app
+
+
+def _create_app(ctx, config):
     app = flask.Flask('nudge')
-    app.config.update(**configs)
+    app.config.update(**config)
 
     for name, fn in _functions.items():
         _add_function(app, name, fn, ctx)
@@ -91,13 +109,8 @@ def unsubscribe(ctx, request):
 
 if __name__ == '__main__':
     ctx = nudge.context.NudgeContext(
-        db_uri='postgresql://{u}:{p}@{e}:5432/{db}'.format(
-            e=os.environ['NUDGE_DB_ENDPOINT'],
-            db=os.environ['NUDGE_DB_NAME'],
-            u=os.environ['NUDGE_DB_USERNAME'],
-            p=os.environ['NUDGE_DB_PASSWORD'],
-        ),
-        app_configs={
+        os.environ['S3_CONFIG_URI'],
+        flask_config={
             'DEBUG': True,
         }
     )

@@ -9,6 +9,7 @@ class Consume:
         self._db = db
 
     def __call__(self, elem_ids):
+        self._log.info('Calling Consume')
         for elem in self._elem_srv.get_elements(elem_ids):
             self._check_state(elem)
             elem.state = Element.State.Consumed

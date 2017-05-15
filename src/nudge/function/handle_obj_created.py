@@ -3,13 +3,15 @@ from nudge.entity.element import Element
 
 class HandleObjectCreated:
 
-    def __init__(self, db, sub_srv, batch_srv, elem_srv):
+    def __init__(self, db, sub_srv, batch_srv, elem_srv, log):
         self._db = db
         self._sub_srv = sub_srv
         self._batch_srv = batch_srv
         self._elem_srv = elem_srv
+        self._log = log
 
     def __call__(self, bucket, key, **kwargs):
+        self._log.info('Calling HandleObjectCreated')
         result = [
             self._handle_matching_sub(sub, bucket=bucket, key=key, **kwargs)
             for sub in self._sub_srv.find_matching_subscriptions(bucket, key)

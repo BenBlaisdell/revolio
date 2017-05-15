@@ -105,6 +105,7 @@ class NudgeContext:
     def subscribe(self):
         return nudge.function.subscribe.Subscribe(
             db=self.db,
+            log=self.log,
         )
 
     @cached_property
@@ -114,6 +115,7 @@ class NudgeContext:
             sub_srv=self.sub_srv,
             batch_srv=self.batch_srv,
             elem_srv=self.elem_srv,
+            log=self.log,
         )
 
     @cached_property
@@ -129,6 +131,7 @@ class NudgeContext:
         return nudge.function.unsubscribe.Unsubscribe(
             db=self.db,
             sub_srv=self.sub_srv,
+            log=self.log,
         )
 
     # aws

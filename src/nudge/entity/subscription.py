@@ -90,7 +90,7 @@ class Subscription(Entity):
             data=dict(
                 regex=regex,
                 threshold=threshold,
-                endpoint=endpoint,
+                endpoint=endpoint.serialize(),
             )
         ))
 

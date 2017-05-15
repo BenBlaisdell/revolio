@@ -83,6 +83,6 @@ class Element(Entity):
                 bucket=bucket,
                 key=key,
                 size=size,
-                created=created,
+                created=dt.datetime.strftime(created, '%Y-%m-%d %H:%M:%S'),
             )
         ))

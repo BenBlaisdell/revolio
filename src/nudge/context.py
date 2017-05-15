@@ -110,7 +110,7 @@ class NudgeContext:
         )
 
     @cached_property
-    def handle_obj_created(self):
+    def handle_object_created(self):
         return nudge.function.handle_obj_created.HandleObjectCreated(
             db=self.db,
             sub_srv=self.sub_srv,

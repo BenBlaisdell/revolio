@@ -1,3 +1,5 @@
+import datetime as dt
+
 from nudge.entity.element import Element
 
 
@@ -10,8 +12,44 @@ class HandleObjectCreated:
         self._elem_srv = elem_srv
         self._log = log
 
+    def handle_request(self, request):
+        self._log.info('Handling request: HandleObjectCreated')
+
+        # parse parameters
+
+        bucket = request['Bucket']
+        assert isinstance(bucket, str)
+
+        key = request['Key']
+        assert isinstance(key, str)
+
+        size = request['Size']
+        assert isinstance(size, int)
+
+        created = request['Created']
+        assert isinstance(created, str)
+        created = dt.datetime.strptime(created, '%Y-%m-%d %H:%M:%S')
+
+        # format response
+
+        return {
+            'MatchingSubscriptions': {
+                elem.sub_id: {
+                    'ElementId': elem.id,
+                    'Triggered': triggered,
+                }
+                for elem, triggered in self(
+                    bucket=bucket,
+                    key=key,
+                    size=size,
+                    created=created,
+                )
+            },
+        }
+
     def __call__(self, bucket, key, size, created):
-        self._log.info('Calling HandleObjectCreated')
+        self._log.info('Handling call: HandleObjectCreated')
+
         result = [
             self._handle_matching_sub(sub, bucket=bucket, key=key, size=size, created=created)
             for sub in self._sub_srv.find_matching_subscriptions(bucket, key)
@@ -20,8 +58,8 @@ class HandleObjectCreated:
         self._db.commit()
         return result
 
-    def _handle_matching_sub(self, sub, size, created):
-        elem = Element.create(sub_id=sub.id, size=size, created=created)
+    def _handle_matching_sub(self, sub, bucket, key, size, created):
+        elem = Element.create(sub_id=sub.id, bucket=bucket, key=key, size=size, created=created)
         self._db.add(elem)
         return elem, self._evaluate_sub(sub)
 

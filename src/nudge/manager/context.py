@@ -19,6 +19,7 @@ class EnvName(enum.Enum):
 
 class Stack(enum.Enum):
     WEB = 'web'
+    REPO = 'repo'
 
 
 class NudgeCommandContext(object):

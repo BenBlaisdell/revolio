@@ -3,11 +3,14 @@ import os
 
 import awacs.aws
 import awacs.autoscaling
+import awacs.ecs
 import awacs.events
 import awacs.elasticloadbalancing
 import awacs.ec2
 import awacs.helpers.trust
+import itertools
 import troposphere as ts
+import troposphere.cloudformation
 import troposphere.cloudwatch
 import troposphere.autoscaling
 import troposphere.ec2
@@ -59,7 +62,7 @@ def build_template(ctx):
 
 
 def _add_web(t, instance_type, vpc_id, subnets, cluster, log_group,
-             record_set_name, hosted_zone_name, key_name, ami, zones, flask_img, nginx_img,):
+             record_set_name, hosted_zone_name, key_name, ami, zones, flask_img, nginx_img):
 
     task_def = t.add_resource(ts.ecs.TaskDefinition(
         'WebTaskDefinition',
@@ -114,10 +117,10 @@ def _add_web(t, instance_type, vpc_id, subnets, cluster, log_group,
                 ),
             ) for name, statement in [
                 (
-                    'events',
+                    'ecs',  # register instance in cluster
                     awacs.aws.Statement(
                         Effect='Allow',
-                        Action=[awacs.events.Action('*')],
+                        Action=[awacs.ecs.Action('*')],
                         Resource=['*'],
                     ),
                 ), (
@@ -149,21 +152,91 @@ def _add_web(t, instance_type, vpc_id, subnets, cluster, log_group,
         )],
         Role=ts.Ref(service_role),
         TaskDefinition=ts.Ref(task_def),
-
     ))
 
+    asg_logical_id = 'WebAutoscalingGroup'
+    launch_config_logical_id = 'WebLaunchConfiguration'
+
     launch_config = t.add_resource(ts.autoscaling.LaunchConfiguration(
-        'WebLaunchConfiguration',
+        launch_config_logical_id,
         KeyName=key_name,
         ImageId=ami,
         AssociatePublicIpAddress=True,
         SecurityGroups=[ts.Ref(s_group)],
         IamInstanceProfile=ts.Ref(instance_profile),
         InstanceType=instance_type,
+        Metadata=ts.autoscaling.Metadata(
+            ts.cloudformation.Init({
+                'config': ts.cloudformation.InitConfig(
+                    files=ts.cloudformation.InitFiles({
+                        '/etc/cfn/cfn-hup.conf': ts.cloudformation.InitFile(
+                            content=ts.Join('', [
+                                '[main]', '\n',
+                                'stack=', ts.Ref('AWS::StackId'), '\n',
+                                'region=', ts.Ref('AWS::Region'), '\n',
+                            ]),
+                            mode='000400',
+                            owner='root',
+                            group='root',
+                        ),
+                        '/etc/cfn/hooks.d/cfn-auto-reloader.conf': ts.cloudformation.InitFile(
+                            content=ts.Join('', [
+                                '[cfn-auto-reloader-hook]', '\n',
+                                'triggers=post.update', '\n',
+                                'path=Resources.{}.Metadata.AWS::CloudFormation::Init'.format(launch_config_logical_id), '\n',
+                                'action=/opt/aws/bin/cfn-init -v ',
+                                '    --stack    ', ts.Ref('AWS::StackName'),
+                                '    --resource ', launch_config_logical_id,
+                                '    --region   ', ts.Ref('AWS::Region'), '\n',
+                                'runas=root', '\n',
+                            ]),
+                            mode='000400',
+                            owner='root',
+                            group='root',
+                        )},
+                    ),
+                    services=ts.cloudformation.InitServices({
+                        'cfn-hup': ts.cloudformation.InitService(
+                            ensureRunning='true',
+                            enabled='true',
+                            files=['/etc/cfn/cfn-hup.conf', '/etc/cfn/hooks.d/cfn-auto-reloader.conf'],
+                        )},
+                    ),
+                    commands={
+                        # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/launch_container_instance.html
+                        '01_add_instance_to_cluster': {'command': ts.Join('', [
+                            '#!/bin/bash', '\n',
+                            'echo ECS_CLUSTER=', ts.Ref(cluster), ' >> /etc/ecs/ecs.config',
+                        ])},
+                        # https://docs.aws.amazon.com/systems-manager/latest/userguide/what-is-systems-manager.html
+                        '02_install_ssm_agent': {'command': ts.Join('', [
+                            '#!/bin/bash', '\n',
+                            'yum -y update', '\n',
+                            'curl https://amazon-ssm-eu-west-1.s3.amazonaws.com/latest/linux_amd64/amazon-ssm-agent.rpm -o amazon-ssm-agent.rpm', '\n',
+                            'yum install -y amazon-ssm-agent.rpm',
+                        ])},
+                    },
+                ),
+            }),
+        ),
+        UserData=ts.Base64(ts.Join('', [
+            '#!/bin/bash -xe', '\n',
+            'yum install -y aws-cfn-bootstrap', '\n',
+            '/opt/aws/bin/cfn-init -v ',
+            '    --stack    ', ts.Ref('AWS::StackName'),
+            '    --resource ', launch_config_logical_id,
+            '    --region   ', ts.Ref('AWS::Region'),
+            '\n',
+            '/opt/aws/bin/cfn-signal -e $? ',
+            '     --stack   ', ts.Ref('AWS::StackName'),
+            '    --resource ', asg_logical_id,
+            '    --region   ', ts.Ref('AWS::Region'),
+            '\n',
+        ])),
     ))
 
     asg = t.add_resource(ts.autoscaling.AutoScalingGroup(
-        'WebAutoscalingGroup',
+        asg_logical_id,
         LaunchConfigurationName=ts.Ref(launch_config),
         VPCZoneIdentifier=subnets,
         AvailabilityZones=zones,
@@ -183,12 +256,13 @@ def _add_web_load_balancing(t, vpc_id, subnets, record_set_name, hosted_zone_nam
         SecurityGroupIngress=[
             ts.ec2.SecurityGroupRule(
                 IpProtocol='tcp',
-                FromPort=80,
-                ToPort=80,
+                FromPort=lower,
+                ToPort=upper,
                 CidrIp=ip,
             )
+            for lower, upper in [(80, 8080), (22, 22)]
             for ip in ['10.0.0.0/8', '172.16.0.0/12']
-        ]
+        ],
     ))
 
     elb = t.add_resource(ts.elasticloadbalancing.LoadBalancer(
@@ -315,7 +389,3 @@ def _container_def(image, service, container, port, log_group, cpu=64, memory=25
             },
         ),
     )
-
-
-def _get_image(service, container):
-    return 'image-uri'  # todo

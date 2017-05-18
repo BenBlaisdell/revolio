@@ -21,8 +21,6 @@ class Subscribe:
         prefix = request.get('Prefix', None)
         assert isinstance(prefix, str) or (prefix is None)
 
-        e_protocol = request['Endpoint']['Protocol']
-        e_params = request['Endpoint']['Parameters']
         endpoint = Endpoint.deserialize(request['Endpoint'])
 
         regex = request.get('Regex', None)

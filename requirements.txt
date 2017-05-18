@@ -14,8 +14,10 @@ jmespath==0.9.2
 MarkupSafe==1.0
 marshmallow==2.13.5
 packaging==16.8
+pathlib==1.0.1
 psycopg2==2.7.1
 pyparsing==2.2.0
+pytest==3.0.7
 python-dateutil==2.6.0
 requests==2.14.2
 ruamel.yaml==0.14.12

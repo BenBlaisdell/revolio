@@ -29,6 +29,9 @@ class Subscribe:
         threshold = request.get('Threshold', None)
         assert isinstance(threshold, int) or (threshold is None)
 
+        custom = request.get('Custom', None)
+        assert isinstance(custom, dict) or (custom is None)
+
         # make call
 
         sub = self(
@@ -37,6 +40,7 @@ class Subscribe:
             endpoint=endpoint,
             regex=regex,
             threshold=threshold,
+            custom=custom
         )
 
         # format response
@@ -45,7 +49,7 @@ class Subscribe:
             'SubscriptionId': sub.id,
         }
 
-    def __call__(self, bucket, endpoint, *, prefix=None, regex=None, threshold=0):
+    def __call__(self, bucket, endpoint, *, prefix=None, regex=None, threshold=0, custom=None):
         self._log.info('Handling call: Subscribe')
 
         sub = Subscription.create(
@@ -54,6 +58,7 @@ class Subscribe:
             prefix=prefix,
             regex=regex,
             threshold=threshold,
+            custom=custom
         )
 
         self._db.add(sub)

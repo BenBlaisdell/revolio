@@ -15,8 +15,11 @@ class BatchService:
 
         self._db.flush()
 
-        msg = json.dumps({
-            'SubscriptionId': sub.id,
-        })
+        if sub.custom:
+            msg = json.dumps(sub.custom)
+        else:
+            msg = json.dumps({
+                'SubscriptionId': sub.id,
+            })
 
         sub.endpoint.send_message(ctx=self._ctx, msg=msg)

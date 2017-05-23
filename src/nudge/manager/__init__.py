@@ -33,12 +33,21 @@ def update_stack(cmd_ctx, stack):
     commands.build_template(cmd_ctx, stack)
 
 
-@cli.command('update-stack')
+@cli.command('build-stack')
 @click.argument('stack', type=EnumType(Stack))
 @click.pass_obj
-def update_stack(cmd_ctx, stack):
+def build_stack(cmd_ctx, stack):
     commands.build_template(cmd_ctx, stack)
-    commands.update_stack(cmd_ctx, stack)
+
+
+@cli.command('update-stack')
+@click.argument('stack', type=EnumType(Stack))
+@click.option('--create', default=False)
+@click.pass_obj
+def update_stack(cmd_ctx, stack, create):
+    commands.build_template(cmd_ctx, stack)
+    stack_exists = not create
+    commands.update_stack(cmd_ctx, stack, exists=stack_exists)
 
 
 @cli.command('release')

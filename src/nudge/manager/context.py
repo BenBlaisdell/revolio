@@ -21,6 +21,7 @@ class Stack(enum.Enum):
     WEB = 'web'
     REPO = 'repo'
     S3 = 's3'
+    DB = 'db'
 
 
 class NudgeCommandContext(object):
@@ -52,6 +53,9 @@ class NudgeCommandContext(object):
 
     def get_stack_name(self, s):
         return self._get_yaml_resource('stacks/{}/resources.yaml'.format(s.value))['StackName']
+
+    def get_stack_tags(self, s):
+        return self._get_yaml_resource('stacks/tags.yaml').items()
 
     @cached_property
     def base_path(self):

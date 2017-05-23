@@ -26,6 +26,7 @@ class App:
         for f in functions:
             self._add_function(f)
 
+        self._log.info('Adding endpoint: CheckHealth')
         self._app.add_url_rule(
             '/api/1/call/CheckHealth/',
             'CheckHealth',
@@ -34,12 +35,16 @@ class App:
         )
 
         db.init_app(self._app)
+        self._db = db
 
     @property
     def config(self):
         return self._app.config
 
     def run(self):
+        with self._app.app_context():
+            self._db.create_tables()
+
         self._app.run()
 
     @property

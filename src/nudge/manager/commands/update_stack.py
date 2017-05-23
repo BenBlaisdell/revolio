@@ -23,6 +23,10 @@ def update_stack(ctx, stack_type, exists=True):
     client.create_change_set(
         StackName=stack_name,
         TemplateBody=ctx.get_template(stack_type),
+        Tags=[
+            {'Key': k, 'Value': v}
+            for k, v in ctx.get_stack_tags(stack_type)
+        ],
         ChangeSetName=c_s_name,
         Capabilities=['CAPABILITY_IAM'],
         ChangeSetType='UPDATE' if exists else 'CREATE',

@@ -17,5 +17,7 @@ def _get_resource_group(s):
         return nudge.manager.stacks.repo.RepoResources
     elif s == Stack.S3:
         return nudge.manager.stacks.s3.S3Resources
+    elif s == Stack.DB:
+        return nudge.manager.stacks.db.DatabaseResources
     else:
         raise Exception('No builder for stack type: {}'.format(s))

@@ -29,6 +29,7 @@ class S3Resources(ResourceGroup):
     def bucket(self):
         return ts.s3.Bucket(
             'Bucket',
+            DeletionPolicy='Retain',  # do not delete bucket on deletion of stack
             BucketName=self.bucket_name,
         )
 

@@ -1,15 +1,25 @@
 import base64
 import logging
-
 import subprocess
 
 import boto3
+
+import nudge.manager.util
+from nudge.manager.context import Stack
 
 _logger = logging.getLogger(__name__)
 
 
 def release(ctx, component, dm_name):
-    tag = ctx.get_docker_repo_uri(component)
+    tag = build(ctx, component, dm_name)
+    _push(tag)
+    _logger.info('Pushed {}'.format(tag))
+
+
+def build(ctx, component, dm_name):
+    repo_uri = ctx.get_architecture_config(Stack.WEB)['{}Image'.format(component.value.capitalize())]
+    tag = nudge.manager.util.get_next_image_tag(repo_uri)
+
     _execute_commands(
         'eval $(docker-machine env {})'.format(dm_name),
         'docker build -f {f} -t {t} {p}'.format(
@@ -19,6 +29,12 @@ def release(ctx, component, dm_name):
         ),
     )
 
+    _logger.info('Built {}'.format(tag))
+
+    return tag
+
+
+def _push(tag):
     repo_account_id = tag.split('.', 1)[0]
     username, password, registry = _get_ecr_credentials(repo_account_id)
 
@@ -53,7 +69,7 @@ def _execute_commands(*commands):
     )
 
     while True:
-        status = proc.stdout.readline()
+        status = proc.stdout.readline().decode("utf-8").rstrip('\n')
         if not status:
             break
 

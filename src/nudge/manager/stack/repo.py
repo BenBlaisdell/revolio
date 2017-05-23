@@ -1,2 +1,2 @@
-def build_template(ctx):
+def add_resources(t, config):
     pass

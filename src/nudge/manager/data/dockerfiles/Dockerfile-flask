@@ -1,35 +1,47 @@
 FROM ubuntu:15.04
 MAINTAINER datawarehouse <aus-eng-data-warehouse@rmn.com>
 
-RUN apt-get update
-RUN apt-get install -y python-dev python-pip libpq-dev vim curl mlocate
+RUN apt-get update && \
+    apt-get upgrade -y
 
-RUN apt-get install -y wget
+RUN apt-get install -y wget vim curl mlocate
+RUN apt-get install -y python3-pip
 
-RUN mkdir -p /home/root
-RUN cd /home/root
-RUN wget https://bootstrap.pypa.io/get-pip.py
-RUN python get-pip.py
-RUN /usr/local/bin/pip install awscli
+# clean apt-get
+RUN apt-get autoclean && \
+    apt-get clean && \
+    apt-get autoremove
 
-RUN apt-get install -y libmagic-dev \
-    libxml2-dev \
-    libxmlsec1-dev \
-    swig \
-    libxslt1-dev
+RUN wget https://www.python.org/ftp/python/3.5.3/Python-3.5.3.tgz && \
+    tar xzvf Python-3.5.3.tgz && \
+    cd Python-3.5.3 && \
+    ./configure && \
+    make && \
+    make install
+
+# update pip
+RUN pip3 install -U pip setuptools
+
+RUN pip3 install ipython
+
+# install uwsgi
+RUN pip3 install uwsgi
 
 ADD /requirements.txt /requirements.txt
-
-RUN pip install -r /requirements.txt
+RUN pip3 install -r /requirements.txt
 
 ADD src/ /src/
 
-RUN updatedb # index all file for a quick search with 'locate'
+RUN mkdir -p /mnt/docker-volumes
+VOLUME /mnt/docker-volumes
 
-WORKDIR /src/nudge/service/temp_api
+# index all files for a quick search with 'locate'
+RUN updatedb
 
-ENV PYTHONPATH=/src/python:${PYTHONPATH}
+WORKDIR /src/nudge
+
+ENV PYTHONPATH=/src:${PYTHONPATH}
 
 EXPOSE 9191
 
-CMD ["python", "temp_api.py"]
+CMD uwsgi --ini /src/nudge/uwsgi.ini

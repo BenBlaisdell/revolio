@@ -26,6 +26,13 @@ class App:
         for f in functions:
             self._add_function(f)
 
+        self._app.add_url_rule(
+            '/api/1/call/CheckHealth/',
+            'CheckHealth',
+            lambda: 'Healthy',
+            methods=['GET'],
+        )
+
         db.init_app(self._app)
 
     @property

@@ -20,6 +20,7 @@ class EnvName(enum.Enum):
 class Stack(enum.Enum):
     WEB = 'web'
     REPO = 'repo'
+    S3 = 's3'
 
 
 class NudgeCommandContext(object):
@@ -40,27 +41,17 @@ class NudgeCommandContext(object):
     def get_dockerfile_path(self, component):
         return self._get_data_path('dockerfiles', 'Dockerfile-{}'.format(component.name.lower()))
 
-    def get_docker_repo_uri(self, component):
-        return self.architecture_config['{}Image'.format(component.name.capitalize())]
+    def save_template(self, stack, template):
+        self._save_resource('stacks/{}/template.json'.format(stack.value), template)
 
-    def save_template(self, template):
-        self._save_resource('stacks/web/template.json', template)
+    def get_architecture_config(self, s):
+        return self._get_yaml_resource('stacks/{}/config.yaml'.format(s.value))
 
-    @cached_property
-    def web_template(self):
-        return self._get_string_resource('stacks/web/template.json')
+    def get_template(self, s):
+        return self._get_string_resource('stacks/{}/template.json'.format(s.value))
 
-    @cached_property
-    def stack_name(self):
-        return self._get_yaml_resource('stacks/web/resources.yaml')['StackName']
-
-    @cached_property
-    def service_config(self):
-        return self._get_yaml_resource('config.yaml')
-
-    @cached_property
-    def architecture_config(self):
-        return self._get_yaml_resource('stacks/web/config.yaml')
+    def get_stack_name(self, s):
+        return self._get_yaml_resource('stacks/{}/resources.yaml'.format(s.value))['StackName']
 
     @cached_property
     def base_path(self):

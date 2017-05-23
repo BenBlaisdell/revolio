@@ -1,5 +1,4 @@
 import logging
-import os
 
 import awacs.aws
 import awacs.autoscaling
@@ -7,7 +6,10 @@ import awacs.ecs
 import awacs.events
 import awacs.elasticloadbalancing
 import awacs.ec2
+import awacs.s3
+import awacs.kms
 import awacs.helpers.trust
+import awacs.logs
 import itertools
 import troposphere as ts
 import troposphere.cloudformation
@@ -21,11 +23,13 @@ import troposphere.elasticloadbalancing
 import troposphere.route53
 
 
+import nudge.manager.util
+
+
 _logger = logging.getLogger(__name__)
 
 
-def build_template(ctx):
-    config = ctx.architecture_config
+def add_resources(t, config):
 
     vpc = config['VpcId']
     subnets = config['Subnets']
@@ -37,8 +41,9 @@ def build_template(ctx):
     web_i_type = config['WebInstanceType']
     flask_img = config['FlaskImage']
     nginx_img = config['NginxImage']
-
-    t = ts.Template()
+    s3_conf_uri = config['S3ConfigUri']
+    secrets_key_arn = config['SecretsKeyArn']
+    authorized_ips = config['AuthorizedCidrIps']
 
     # resources
 
@@ -55,24 +60,49 @@ def build_template(ctx):
 
     _add_web(
         t, web_i_type, vpc, subnets, cluster, l_group,
-        record_set_name, hosted_zone_name, key_name, ami, zones, flask_img, nginx_img,
+        record_set_name, hosted_zone_name, key_name, ami, zones, flask_img, nginx_img, s3_conf_uri,
+        secrets_key_arn, authorized_ips,
     )
 
-    ctx.save_template(t.to_json())
 
+def _add_web(t, instance_type, vpc_id, subnets, cluster, log_group, record_set_name, hosted_zone_name, key_name, ami,
+             zones, flask_img, nginx_img, s3_conf_uri, secrets_key_arn, authorized_ips):
 
-def _add_web(t, instance_type, vpc_id, subnets, cluster, log_group,
-             record_set_name, hosted_zone_name, key_name, ami, zones, flask_img, nginx_img):
-
+    flask_container_name = 'flask'
     task_def = t.add_resource(ts.ecs.TaskDefinition(
         'WebTaskDefinition',
         ContainerDefinitions=[
-            _container_def(flask_img, 'web', 'flask', 9091, log_group),
-            _container_def(nginx_img, 'web', 'nginx', 8080, log_group),
+            ts.ecs.ContainerDefinition(
+                Name=flask_container_name,
+                Image=nudge.manager.util.get_latest_image_tag(flask_img),
+                Cpu=64,
+                Memory=256,
+                PortMappings=[ts.ecs.PortMapping(
+                    HostPort=9091,
+                    ContainerPort=9091,
+                )],
+                LogConfiguration=_aws_logs_config('web', 'flask'),
+                Environment=[ts.ecs.Environment(
+                    Name='S3_CONFIG_URI',
+                    Value=s3_conf_uri,
+                )],
+            ),
+            ts.ecs.ContainerDefinition(
+                Name='nginx',
+                Image=nudge.manager.util.get_latest_image_tag(nginx_img),
+                Cpu=64,
+                Memory=256,
+                PortMappings=[ts.ecs.PortMapping(
+                    HostPort=8080,
+                    ContainerPort=8080,
+                )],
+                LogConfiguration=_aws_logs_config('web', 'nginx'),
+                VolumesFrom=[ts.ecs.VolumesFrom(SourceContainer=flask_container_name)],
+            ),
         ],
     ))
 
-    elb, s_group = _add_web_load_balancing(t, vpc_id, subnets, record_set_name, hosted_zone_name)
+    elb, s_group = _add_web_load_balancing(t, vpc_id, subnets, record_set_name, hosted_zone_name, authorized_ips)
 
     service_role = t.add_resource(ts.iam.Role(
         'WebServiceRole',
@@ -117,10 +147,33 @@ def _add_web(t, instance_type, vpc_id, subnets, cluster, log_group,
                 ),
             ) for name, statement in [
                 (
+                    'access-s3-resources',  # allow pulling s3 config
+                    awacs.aws.Statement(
+                        Effect='Allow',
+                        Action=[awacs.s3.Action('*')],
+                        Resource=[
+                            'arn:aws:s3:::{}*'.format(nudge.manager.util.get_bucket(s3_conf_uri)),
+                        ],
+                    ),
+                ), (
+                    'use-secrets-kms-key',  # allow decrypting s3 secrets
+                    awacs.aws.Statement(
+                        Effect='Allow',
+                        Action=[awacs.kms.Action('*')],
+                        Resource=[secrets_key_arn],
+                    ),
+                ), (
                     'ecs',  # register instance in cluster
                     awacs.aws.Statement(
                         Effect='Allow',
                         Action=[awacs.ecs.Action('*')],
+                        Resource=['*'],
+                    ),
+                ), (
+                    'logs',  # publish container logs to log group
+                    awacs.aws.Statement(
+                        Effect='Allow',
+                        Action=[awacs.logs.Action('*')],
                         Resource=['*'],
                     ),
                 ), (
@@ -144,7 +197,7 @@ def _add_web(t, instance_type, vpc_id, subnets, cluster, log_group,
     ecs_service = t.add_resource(ts.ecs.Service(
         'WebEcsService',
         Cluster=ts.Ref(cluster),
-        DesiredCount=0,
+        DesiredCount=2,
         LoadBalancers=[ts.ecs.LoadBalancer(
             ContainerName='nginx',
             ContainerPort=8080,
@@ -248,7 +301,17 @@ def _add_web(t, instance_type, vpc_id, subnets, cluster, log_group,
     ))
 
 
-def _add_web_load_balancing(t, vpc_id, subnets, record_set_name, hosted_zone_name):
+def _aws_logs_config(service, container):
+    return ts.ecs.LogConfiguration(
+        LogDriver='awslogs',
+        Options={
+            'awslogs-group': 'dwh-nudge',
+            'awslogs-region': 'us-east-1',
+            'awslogs-stream-prefix': '{}/{}'.format(service, container),
+        },
+    )
+
+def _add_web_load_balancing(t, vpc_id, subnets, record_set_name, hosted_zone_name, authorized_ips):
     security_group = t.add_resource(ts.ec2.SecurityGroup(
         'WebSecurityGroup',
         GroupDescription='Nudge Web Security Group',
@@ -261,7 +324,10 @@ def _add_web_load_balancing(t, vpc_id, subnets, record_set_name, hosted_zone_nam
                 CidrIp=ip,
             )
             for lower, upper in [(80, 8080), (22, 22)]
-            for ip in ['10.0.0.0/8', '172.16.0.0/12']
+            for ip in itertools.chain(
+                ['10.0.0.0/8', '172.16.0.0/12'],
+                authorized_ips,
+            )
         ],
     ))
 
@@ -278,7 +344,7 @@ def _add_web_load_balancing(t, vpc_id, subnets, record_set_name, hosted_zone_nam
             PolicyNames=['NudgeWebVersionCookieStickinessPolicy'],
         )],
         HealthCheck=ts.elasticloadbalancing.HealthCheck(
-            Target='HTTP:8080/',
+            Target='HTTP:8080/api/1/call/CheckHealth/',
             HealthyThreshold=2,
             UnhealthyThreshold=7,
             Interval=30,
@@ -370,10 +436,10 @@ def _add_web_scale_down(t, asg):
     ))
 
 
-def _container_def(image, service, container, port, log_group, cpu=64, memory=256):
+def _container_def(image, service, container, port, log_group, env=None, cpu=64, memory=256):
     return ts.ecs.ContainerDefinition(
         Name=container,
-        Image=image,
+        Image=nudge.manager.util.get_latest_image_tag(image),
         Cpu=cpu,
         Memory=memory,
         PortMappings=[ts.ecs.PortMapping(
@@ -388,4 +454,5 @@ def _container_def(image, service, container, port, log_group, cpu=64, memory=25
                 'awslogs-stream-prefix': '{}/{}'.format(service, container),
             },
         ),
+        Environment=env or [],
     )

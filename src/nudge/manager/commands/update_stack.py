@@ -10,6 +10,9 @@ import boto3
 import click
 import itertools
 
+from nudge.manager.context import Stack
+
+
 _logger = logging.getLogger(__name__)
 client = boto3.client('cloudformation')
 
@@ -17,11 +20,11 @@ client = boto3.client('cloudformation')
 def update_stack(ctx, stack_type):
 
     c_s_name = _get_change_set_name(stack_type)
-    stack_name = ctx.stack_name
+    stack_name = ctx.get_stack_name(stack_type)
 
     client.create_change_set(
         StackName=stack_name,
-        TemplateBody=ctx.web_template,
+        TemplateBody=ctx.get_template(stack_type),
         ChangeSetName=c_s_name,
         Capabilities=['CAPABILITY_IAM'],
     )

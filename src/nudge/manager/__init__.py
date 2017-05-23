@@ -26,6 +26,13 @@ def cli(ctx, resources, env):
     )
 
 
+@cli.command('build-template')
+@click.argument('stack', type=EnumType(Stack))
+@click.pass_obj
+def update_stack(cmd_ctx, stack):
+    commands.build_template(cmd_ctx, stack)
+
+
 @cli.command('update-stack')
 @click.argument('stack', type=EnumType(Stack))
 @click.pass_obj
@@ -40,6 +47,24 @@ def update_stack(cmd_ctx, stack):
 @click.pass_obj
 def release(cmd_ctx, component, docker_machine):
     commands.release(cmd_ctx, component, docker_machine)
+
+
+@cli.command('build')
+@click.argument('component', type=EnumType(Component))
+@click.option('--docker-machine', '-dm', default='default')
+@click.pass_obj
+def build(cmd_ctx, component, docker_machine):
+    commands.build(cmd_ctx, component, docker_machine)
+
+
+@cli.command('release-flask')
+@click.option('--docker-machine', '-dm', default='default')
+@click.pass_obj
+def build(cmd_ctx, docker_machine):
+    commands.build(cmd_ctx, Component.FLASK, docker_machine)
+    commands.release(cmd_ctx, Component.FLASK, docker_machine)
+    commands.build_template(cmd_ctx, Stack.WEB)
+    commands.update_stack(cmd_ctx, Stack.WEB)
 
 
 if __name__ == '__main__':

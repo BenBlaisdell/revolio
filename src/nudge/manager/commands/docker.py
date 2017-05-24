@@ -7,6 +7,7 @@ import boto3
 import nudge.manager.util
 from nudge.manager.context import Stack
 
+
 _logger = logging.getLogger(__name__)
 
 
@@ -17,7 +18,7 @@ def release(ctx, component, dm_name):
 
 
 def build(ctx, component, dm_name):
-    repo_uri = ctx.get_architecture_config(Stack.WEB)['{}Image'.format(component.value.capitalize())]
+    repo_uri = ctx.get_repo_uri(component)
     tag = nudge.manager.util.get_next_image_tag(repo_uri)
 
     _execute_commands(

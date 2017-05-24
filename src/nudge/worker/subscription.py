@@ -8,9 +8,12 @@ from nudge.context import NudgeContext
 from nudge.endpoint import SqsEndpoint
 from nudge.client.nudge import NudgeClient
 
+
 _logger = logging.getLogger()
 
+
 class SubscriptionWorker(Worker):
+
     def __init__(self):
         super(SubscriptionWorker, self).__init__(_logger)
         config_uri = os.environ['S3_CONFIG_URI']
@@ -37,13 +40,14 @@ class SubscriptionWorker(Worker):
                             Key=record['s3']['object']['key'],
                             Size=record['s3']['object']['size'],
                             Created=record['eventTime'])
-            _logger.info('Deleting message {message_id}'.format(message_id=sqs_message['MessageId']))
-            self._queue.delete_message(self._ctx, sqs_message['ReceiptHandle'])
+                _logger.info('Deleting message {message_id}'.format(message_id=sqs_message['MessageId']))
+                self._queue.delete_message(self._ctx, sqs_message['ReceiptHandle'])
             except Exception as e:
                 _logger.error('Error when processing message {message}\n\n\n{error}'.format(
                     message=sqs_message['Body'],
                     error=json.dumps(traceback.format_exc())
                 ))
+
 
 if __name__ == 'main':
     worker = SubscriptionWorker()

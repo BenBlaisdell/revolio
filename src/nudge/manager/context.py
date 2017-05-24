@@ -9,6 +9,7 @@ import ruamel.yaml as ryaml
 class Component(enum.Enum):
     FLASK = 'flask'
     NGINX = 'nginx'
+    WORKER = 'worker'
 
 
 class EnvName(enum.Enum):
@@ -22,6 +23,7 @@ class Stack(enum.Enum):
     REPO = 'repo'
     S3 = 's3'
     DB = 'db'
+    WORKER = 'worker'
 
 
 class NudgeCommandContext(object):
@@ -35,6 +37,17 @@ class NudgeCommandContext(object):
     @cached_property
     def _base_data_path(self):
         return os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data')
+
+    def get_repo_uri(self, c):
+        return self.get_architecture_config(self._get_component_stack(c))['{}Image'.format(c.value.capitalize())]
+
+    def _get_component_stack(self, c):
+        if c in [Component.FLASK, Component.NGINX]:
+            return Stack.WEB
+        if c in [Component.WORKER]:
+            return Stack.WORKER
+        else:
+            raise Exception('Unknown component')
 
     def _get_data_path(self, *args):
         return os.path.join(self._base_data_path, *args)

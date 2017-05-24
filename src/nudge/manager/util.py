@@ -54,16 +54,19 @@ def _get_next_version(reg_id, repo):
 
 
 def _get_latest_version(reg_id, repo):
-    return max(map(
-        lambda i: packaging.version.parse(i['imageTag']),
-        itertools.chain.from_iterable(map(
-            lambda r: r['imageIds'],
-            _ecr_client.get_paginator('list_images').paginate(
-                registryId=reg_id,
-                repositoryName=repo,
-                filter={'tagStatus': 'TAGGED'},
-            ),
-        )),
+    return max(itertools.chain(
+        [packaging.version.parse('0.0.0')],  # default if no images yet
+        map(
+            lambda i: packaging.version.parse(i['imageTag']),
+            itertools.chain.from_iterable(map(
+                lambda r: r['imageIds'],
+                _ecr_client.get_paginator('list_images').paginate(
+                    registryId=reg_id,
+                    repositoryName=repo,
+                    filter={'tagStatus': 'TAGGED'},
+                ),
+            )),
+        )
     )).base_version
 
 

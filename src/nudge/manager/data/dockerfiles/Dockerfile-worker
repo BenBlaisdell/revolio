@@ -1,0 +1,39 @@
+FROM ubuntu:15.04
+MAINTAINER datawarehouse <aus-eng-data-warehouse@rmn.com>
+
+RUN apt-get update && \
+    apt-get upgrade -y
+
+RUN apt-get install -y wget vim curl mlocate
+RUN apt-get install -y python3-pip
+
+# clean apt-get
+RUN apt-get autoclean && \
+    apt-get clean && \
+    apt-get autoremove
+
+RUN wget https://www.python.org/ftp/python/3.5.3/Python-3.5.3.tgz && \
+    tar xzvf Python-3.5.3.tgz && \
+    cd Python-3.5.3 && \
+    ./configure && \
+    make && \
+    make install
+
+# update pip
+RUN pip3 install -U pip setuptools
+
+RUN pip3 install ipython
+
+ADD /requirements.txt /requirements.txt
+RUN pip3 install -r /requirements.txt
+
+ADD src/ /src/
+
+# index all files for a quick search with 'locate'
+RUN updatedb
+
+WORKDIR /src/nudge
+
+ENV PYTHONPATH=/src:${PYTHONPATH}
+
+CMD python3 /src/nudge/worker/subscription.py

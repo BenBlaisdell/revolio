@@ -2,19 +2,12 @@ import boto3
 import botocore.client
 from werkzeug.utils import cached_property
 
-import nudge.app
-import nudge.batch
-import nudge.config
-import nudge.db
-import nudge.entity.element
-import nudge.entity.notification
-import nudge.entity.subscription
-import nudge.function
-import nudge.function.consume
-import nudge.function.handle_obj_created
-import nudge.function.subscribe
-import nudge.function.unsubscribe
-import nudge.log
+import nudge.core.batch
+import nudge.core.config
+import nudge.core.db
+import nudge.core.entity
+import nudge.core.function
+import nudge.core.log
 
 
 class NudgeContext:
@@ -48,14 +41,14 @@ class NudgeContext:
 
     @cached_property
     def db(self):
-        return nudge.db.Database(
+        return nudge.core.db.Database(
             log=self.log,
             db_uri=self.db_uri,
         )
 
     @cached_property
     def app(self):
-        return nudge.app.App(
+        return nudge.core.app.App(
             ctx=self,
             flask_config=self.flask_config,
             db=self.db,
@@ -64,7 +57,7 @@ class NudgeContext:
 
     @cached_property
     def config(self):
-        return nudge.config.ConfigService(
+        return nudge.core.config.ConfigService(
             log=self.log,
             s3=self.s3,
             config_s3_uri=self.config_s3_uri,
@@ -72,46 +65,46 @@ class NudgeContext:
 
     @cached_property
     def sub_srv(self):
-        return nudge.entity.subscription.SubscriptionService(
+        return nudge.core.entity.SubscriptionService(
             db=self.db,
         )
 
 
     @cached_property
     def elem_srv(self):
-        return nudge.entity.element.ElementService(
+        return nudge.core.entity.ElementService(
             db=self.db,
         )
 
     @cached_property
     def nfn_srv(self):
-        return nudge.entity.notification.NotificationService(
+        return nudge.core.entity.NotificationService(
             db=self.db,
         )
 
     @cached_property
     def batch_srv(self):
-        return nudge.batch.BatchService(
+        return nudge.core.batch.BatchService(
             ctx=self,
             db=self.db,
         )
 
     @cached_property
     def log(self):
-        return nudge.log.LogService()
+        return nudge.core.log.LogService()
 
     # functions
 
     @cached_property
     def subscribe(self):
-        return nudge.function.subscribe.Subscribe(
+        return nudge.core.function.Subscribe(
             db=self.db,
             log=self.log,
         )
 
     @cached_property
     def handle_object_created(self):
-        return nudge.function.handle_obj_created.HandleObjectCreated(
+        return nudge.core.function.HandleObjectCreated(
             db=self.db,
             sub_srv=self.sub_srv,
             batch_srv=self.batch_srv,
@@ -121,7 +114,7 @@ class NudgeContext:
 
     @cached_property
     def consume(self):
-        return nudge.function.consume.Consume(
+        return nudge.core.function.Consume(
             log=self.log,
             elem_srv=self.elem_srv,
             db=self.db,
@@ -129,7 +122,7 @@ class NudgeContext:
 
     @cached_property
     def unsubscribe(self):
-        return nudge.function.unsubscribe.Unsubscribe(
+        return nudge.core.function.Unsubscribe(
             db=self.db,
             sub_srv=self.sub_srv,
             log=self.log,

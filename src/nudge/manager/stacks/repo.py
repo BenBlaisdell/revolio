@@ -1,4 +1,4 @@
-from nudge.manager.stack import ResourceGroup
+from revolio.manager.stack import ResourceGroup
 
 
 class RepoResources(ResourceGroup):

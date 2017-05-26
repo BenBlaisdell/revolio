@@ -2,10 +2,7 @@ import json
 import os
 
 import flask
-
-import nudge.context
-from nudge import util
-from nudge.endpoint import Endpoint
+import nudge.core.context
 
 
 class App:
@@ -64,7 +61,7 @@ class App:
 
 
 if __name__ == '__main__':
-    ctx = nudge.context.NudgeContext(
+    ctx = nudge.core.context.NudgeContext(
         os.environ['S3_CONFIG_URI'],
         flask_config={
             'DEBUG': True,

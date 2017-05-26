@@ -3,12 +3,11 @@ import re
 import uuid
 
 import marshmallow as mm
+import revolio as rv
 import sqlalchemy as sa
-from nudge.endpoint import Endpoint
 
-from nudge.entity.entity import Entity
-from nudge.orm import SubscriptionOrm
-from nudge.util import Serializable
+from nudge.core.endpoint import Endpoint
+from nudge.core.orm import SubscriptionOrm
 
 
 class SubscriptionService:
@@ -40,7 +39,7 @@ class SubscriptionService:
         return filter(lambda s: s.matches(bucket, key), subs)
 
 
-class Subscription(Entity):
+class Subscription(rv.Entity):
 
     @property
     def id(self):

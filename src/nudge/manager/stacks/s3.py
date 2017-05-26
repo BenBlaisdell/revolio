@@ -1,11 +1,11 @@
 import awacs.aws
 import awacs.kms
 import troposphere as ts
-import troposphere.s3
 import troposphere.kms
+import troposphere.s3
 from cached_property import cached_property
 
-from nudge.manager.stack import resource, ResourceGroup
+from revolio.manager.stack import resource, ResourceGroup
 
 
 class S3Resources(ResourceGroup):

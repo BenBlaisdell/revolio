@@ -2,8 +2,9 @@ import datetime as dt
 import enum
 import uuid
 
-from nudge.entity.entity import Entity
-from nudge.orm import ElementOrm
+import revolio as rv
+
+from nudge.core.orm import ElementOrm
 
 
 class ElementService:
@@ -33,7 +34,7 @@ class ElementService:
         ]
 
 
-class Element(Entity):
+class Element(rv.Entity):
 
     @property
     def id(self):

@@ -5,29 +5,29 @@ import traceback
 import signal
 
 
-class Worker(object):
-    def __init__(self, logger):
-        self.logger = logger
+class Worker(metaclass=abc.ABCMeta):
 
-    def __call__(self):
+    def __init__(self, logger):
+        self._logger = logger
+
+    def run(self):
         signal_received = Wrapper(False)
-        partial = functools.partial(_handler, self.logger, signal_received)
+        partial = functools.partial(_handler, self._logger, signal_received)
 
         # try to allow for graceful shutdown
         for sig in [signal.SIGTERM, signal.SIGINT]:
             signal.signal(sig, partial)
 
-        self.logger.info('started worker: %s' % type(self).__name__)
+        self._logger.info('Started worker: %s' % type(self).__name__)
         while not signal_received.value:
             try:
                 self._task()
-
             except Exception:
-                self.logger.error(json.dumps(traceback.format_exc()))
+                self._logger.error(json.dumps(traceback.format_exc()))
 
     @abc.abstractmethod
     def _task(self):
-        NotImplementedError
+        pass
 
 
 class Wrapper(object):
@@ -37,5 +37,5 @@ class Wrapper(object):
 
 # noinspection PyUnusedLocal
 def _handler(logger, signal_received, signum, frame):
-    logger.info('signal received: %s' % signum)
+    logger.info('Signal received: %s' % signum)
     signal_received.value = True

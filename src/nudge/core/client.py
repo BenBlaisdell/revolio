@@ -1,6 +1,8 @@
 import requests
 
-class NudgeClient(object):
+
+class NudgeClient:
+
     def __init__(self, host, port=80, api_version=1):
         self._host = host
         self._port = port

@@ -1,10 +1,10 @@
 import uuid
 
+import revolio as rv
 import sqlalchemy as sa
 import sqlalchemy.orm.exc
 
-from nudge.entity.entity import Entity
-from nudge.orm import NotificationOrm
+from nudge.core.orm import NotificationOrm
 
 
 class NotificationService:
@@ -36,7 +36,7 @@ class NotificationService:
         return Notification(orm) if (orm is not None) else None
 
 
-class Notification(Entity):
+class Notification(rv.Entity):
 
     @property
     def bucket(self):

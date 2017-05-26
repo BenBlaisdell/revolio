@@ -1,12 +1,11 @@
-import awacs.aws
-import awacs.kms
 import itertools
+
 import troposphere as ts
 import troposphere.ec2
 import troposphere.rds
 from cached_property import cached_property
 
-from nudge.manager.stack import resource, parameter, ResourceGroup
+from revolio.manager.stack import resource, parameter, ResourceGroup
 
 
 class DatabaseResources(ResourceGroup):

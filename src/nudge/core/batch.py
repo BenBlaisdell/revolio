@@ -1,7 +1,7 @@
 import datetime as dt
 import json
 
-from nudge.entity.element import Element
+from nudge.core.entity import Element
 
 
 class BatchService:

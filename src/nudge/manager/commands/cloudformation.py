@@ -1,35 +1,63 @@
-import json
 import datetime as dt
-import uuid
+import itertools
+import json
 import logging
-import time
-import string
 import random
+import string
+import time
+import uuid
 
 import boto3
 import click
-import itertools
+
+from nudge.manager import stacks
+from nudge.manager.context import Stack
 
 
 _logger = logging.getLogger(__name__)
+
+
 client = boto3.client('cloudformation')
 
 
-def update_stack(ctx, stack_type, exists=True):
+def build_template(ctx, s):
+    config = ctx.get_architecture_config(s)
+    r_group = _get_resource_group(s)(config)
+    ctx.save_template(s, r_group.get_template())
+
+
+_resource_groups = {
+    Stack.WEB: stacks.web.WebResources,
+    Stack.REPO: stacks.repo.RepoResources,
+    Stack.S3: stacks.s3.S3Resources,
+    Stack.DB: stacks.db.DatabaseResources,
+    Stack.WORKER: stacks.worker.WorkerResources,
+}
+
+
+def _get_resource_group(s):
+    if s not in _resource_groups:
+        raise Exception('No builder for stack type: {}'.format(s))
+
+    return _resource_groups[s]
+
+
+def create_stack(ctx, stack_type):
+    stack_name = ctx.get_stack_name(stack_type)
+    client.create_stack(
+        OnFailure='DELETE',
+        **_get_stack_call_params(ctx, stack_name, stack_type),
+    )
+
+
+def update_stack(ctx, stack_type):
 
     c_s_name = _get_change_set_name(stack_type)
     stack_name = ctx.get_stack_name(stack_type)
 
     client.create_change_set(
-        StackName=stack_name,
-        TemplateBody=ctx.get_template(stack_type),
-        Tags=[
-            {'Key': k, 'Value': v}
-            for k, v in ctx.get_stack_tags(stack_type)
-        ],
         ChangeSetName=c_s_name,
-        Capabilities=['CAPABILITY_IAM'],
-        ChangeSetType='UPDATE' if exists else 'CREATE',
+        **_get_stack_call_params(ctx, stack_name, stack_type),
     )
 
     _logger.info('Created change set {}'.format(c_s_name))
@@ -39,6 +67,18 @@ def update_stack(ctx, stack_type, exists=True):
 
     if _user_prompted_update():
         _update_stack(c_s_name, stack_name)
+
+
+def _get_stack_call_params(ctx, s_name, s_type):
+    return dict(
+        StackName=s_name,
+        TemplateBody=ctx.get_template(s_type),
+        Tags=[
+            {'Key': k, 'Value': v}
+            for k, v in ctx.get_stack_tags(s_type)
+        ],
+        Capabilities=['CAPABILITY_IAM'],
+    )
 
 
 def _update_stack(c_s_name, stack_name):

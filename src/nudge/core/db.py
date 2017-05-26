@@ -1,5 +1,5 @@
 import flask_sqlalchemy
-from nudge.orm import EntityOrm
+from nudge.core.orm import EntityOrm
 
 
 class Database:

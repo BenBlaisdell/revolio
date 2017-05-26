@@ -1,25 +1,9 @@
 import sqlalchemy as sa
-import sqlalchemy.dialects.postgresql
-import sqlalchemy.ext.declarative
+
+import revolio as rv
 
 
-class EntityOrmMixin:
-
-    created = sa.Column(
-        sa.TIMESTAMP,
-        server_default=sa.sql.expression.func.current_timestamp(),
-    )
-
-    updated = sa.Column(
-        sa.TIMESTAMP,
-        server_default=sa.sql.expression.func.current_timestamp(),
-        onupdate=sa.sql.expression.func.current_timestamp(),
-    )
-
-    data = sa.Column(sa.dialects.postgresql.JSONB)
-
-
-EntityOrm = sa.ext.declarative.declarative_base(cls=EntityOrmMixin)
+EntityOrm = rv.declarative_base()
 
 
 class SubscriptionOrm(EntityOrm):

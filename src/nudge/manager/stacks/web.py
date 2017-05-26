@@ -11,7 +11,6 @@ import awacs.helpers.trust
 import awacs.kms
 import awacs.logs
 import awacs.s3
-from cached_property import cached_property
 import troposphere as ts
 import troposphere.autoscaling
 import troposphere.cloudformation
@@ -21,11 +20,12 @@ import troposphere.ecs
 import troposphere.elasticloadbalancing
 import troposphere.iam
 import troposphere.logs
+import troposphere.sqs
 import troposphere.route53
+from cached_property import cached_property
 
 import nudge.manager.util
-from nudge.manager.stack import resource, ResourceGroup
-
+from revolio.manager.stack import resource, ResourceGroup
 
 _logger = logging.getLogger(__name__)
 
@@ -92,8 +92,20 @@ class WebResources(ResourceGroup):
     def log_retention_days(self):
         return 14
 
+    @cached_property
+    def events_queue_name(self):
+        return self._config['EventsQueueName']
+
     def __init__(self, config):
         super().__init__(config, prefix='Web')
+
+    @resource
+    def event_queue(self):
+        return ts.sqs.Queue(
+            self._get_logical_id('EventsQueue'),
+            QueueName=self.events_queue_name,
+            VisibilityTimeout=60*5,  # 5 minutes
+        )
 
     @resource
     def log_group(self):
@@ -122,12 +134,11 @@ class WebResources(ResourceGroup):
                 HostPort=9091,
                 ContainerPort=9091,
             )],
-            LogConfiguration=_aws_logs_config('web', 'flask'),
-            Environment=[ts.ecs.Environment(
+            LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name, 'flask'),
+            Environment=nudge.manager.util.env(
                 # todo: get from load location
-                Name='S3_CONFIG_URI',
-                Value=self.s3_config_uri,
-            )],
+                S3_CONF_URI=self.s3_config_uri,
+            ),
         )
 
     @cached_property
@@ -142,7 +153,7 @@ class WebResources(ResourceGroup):
                 HostPort=8080,
                 ContainerPort=8080,
             )],
-            LogConfiguration=_aws_logs_config('web', 'nginx'),
+            LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name, 'nginx'),
             VolumesFrom=[ts.ecs.VolumesFrom(SourceContainer=self.flask_container_def.Name)],
         )
 
@@ -251,7 +262,7 @@ class WebResources(ResourceGroup):
     @resource
     def ec2_instance_profile(self):
         return ts.iam.InstanceProfile(
-            'WebInstanceProfile',
+            self._get_logical_id('InstanceProfile'),
             Path='/',
             Roles=[ts.Ref(self.ec2_instance_profile_role)],
         )
@@ -259,7 +270,7 @@ class WebResources(ResourceGroup):
     @resource
     def ecs_service(self):
         return ts.ecs.Service(
-            'WebEcsService',
+            self._get_logical_id('EcsService'),
             Cluster=ts.Ref(self.ecs_cluster),
             DesiredCount=2,
             LoadBalancers=[ts.ecs.LoadBalancer(
@@ -516,12 +527,4 @@ class Scaling(ResourceGroup):
         )
 
 
-def _aws_logs_config(service, container):
-    return ts.ecs.LogConfiguration(
-        LogDriver='awslogs',
-        Options={
-            'awslogs-group': 'dwh-nudge',
-            'awslogs-region': 'us-east-1',
-            'awslogs-stream-prefix': '{}/{}'.format(service, container),
-        },
-    )
+

@@ -26,54 +26,50 @@ def cli(ctx, resources, env):
     )
 
 
+# cloudformation
+
+
 @cli.command('build-template')
+@click.argument('stack', type=EnumType(Stack))
+@click.pass_obj
+def build_template(cmd_ctx, stack):
+    commands.build_template(cmd_ctx, stack)
+
+
+@cli.command('create-stack')
 @click.argument('stack', type=EnumType(Stack))
 @click.pass_obj
 def update_stack(cmd_ctx, stack):
     commands.build_template(cmd_ctx, stack)
-
-
-@cli.command('build-stack')
-@click.argument('stack', type=EnumType(Stack))
-@click.pass_obj
-def build_stack(cmd_ctx, stack):
-    commands.build_template(cmd_ctx, stack)
+    commands.update_stack(cmd_ctx, stack)
 
 
 @cli.command('update-stack')
 @click.argument('stack', type=EnumType(Stack))
-@click.option('--create', default=False)
 @click.pass_obj
-def update_stack(cmd_ctx, stack, create):
+def update_stack(cmd_ctx, stack):
     commands.build_template(cmd_ctx, stack)
-    stack_exists = not create
-    commands.update_stack(cmd_ctx, stack, exists=stack_exists)
+    commands.update_stack(cmd_ctx, stack)
 
 
-@cli.command('release')
+# docker
+
+
+@cli.command('release-img')
 @click.argument('component', type=EnumType(Component))
 @click.option('--docker-machine', '-dm', default='default')
 @click.pass_obj
-def release(cmd_ctx, component, docker_machine):
-    commands.release(cmd_ctx, component, docker_machine)
+def release_img(cmd_ctx, component, docker_machine):
+    commands.release_img(cmd_ctx, component, docker_machine)
 
 
-@cli.command('build')
+@cli.command('build-img')
 @click.argument('component', type=EnumType(Component))
 @click.option('--docker-machine', '-dm', default='default')
+@click.option('--no-cache', is_flag=True)
 @click.pass_obj
-def build(cmd_ctx, component, docker_machine):
-    commands.build(cmd_ctx, component, docker_machine)
-
-
-@cli.command('release-flask')
-@click.option('--docker-machine', '-dm', default='default')
-@click.pass_obj
-def build(cmd_ctx, docker_machine):
-    commands.build(cmd_ctx, Component.FLASK, docker_machine)
-    commands.release(cmd_ctx, Component.FLASK, docker_machine)
-    commands.build_template(cmd_ctx, Stack.WEB)
-    commands.update_stack(cmd_ctx, Stack.WEB)
+def build_img(cmd_ctx, component, docker_machine, no_cache):
+    commands.build_img(cmd_ctx, component, docker_machine, no_cache=no_cache)
 
 
 if __name__ == '__main__':

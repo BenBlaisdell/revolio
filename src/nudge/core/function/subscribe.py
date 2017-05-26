@@ -1,7 +1,5 @@
-import re
-
-from nudge.endpoint import Endpoint
-from nudge.entity.subscription import Subscription
+from nudge.core.endpoint import Endpoint
+from nudge.core.entity import Subscription
 
 
 class Subscribe:

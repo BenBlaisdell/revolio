@@ -44,3 +44,5 @@ class ResourceGroup(metaclass=ResourceGroupMeta):
 
         for name in self._parameters:
             t.add_parameter(getattr(self, name))
+
+

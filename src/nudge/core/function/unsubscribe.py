@@ -1,4 +1,4 @@
-from nudge.entity.subscription import Subscription
+from nudge.core.entity import Subscription
 
 
 class Unsubscribe:

@@ -32,6 +32,15 @@ class ElementService:
                 .all()
         ]
 
+    def get_sub_elems_by_id(self, sub_id):
+        return [
+            Element(orm)
+            for orm in self._db
+                .query(ElementOrm)
+                .filter(ElementOrm.sub_id == sub_id)
+                .all()
+        ]
+
 
 class Element(Entity):
 

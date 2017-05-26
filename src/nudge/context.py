@@ -11,6 +11,7 @@ import nudge.entity.notification
 import nudge.entity.subscription
 import nudge.function
 import nudge.function.consume
+import nudge.function.elements
 import nudge.function.handle_obj_created
 import nudge.function.subscribe
 import nudge.function.unsubscribe
@@ -106,6 +107,13 @@ class NudgeContext:
     def subscribe(self):
         return nudge.function.subscribe.Subscribe(
             db=self.db,
+            log=self.log,
+        )
+
+    @cached_property
+    def elements(self):
+        return nudge.function.elements.Elements(
+            elem_srv=self.elem_srv,
             log=self.log,
         )
 

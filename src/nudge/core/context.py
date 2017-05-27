@@ -2,6 +2,7 @@ import boto3
 import botocore.client
 from werkzeug.utils import cached_property
 
+import nudge.core.app
 import nudge.core.batch
 import nudge.core.config
 import nudge.core.db

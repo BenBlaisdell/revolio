@@ -17,8 +17,12 @@ class ConfigService:
 
     @cached_property
     def _raw_config(self):
-        self._log.info('Fetching S3 config: {}'.format(self._config_s3_uri))
-        return self._s3.get_object(**_parse_s3_uri(self._config_s3_uri))['Body']
+        while True:
+            self._log.info('Fetching S3 config: {}'.format(self._config_s3_uri))
+            try:
+                return self._s3.get_object(**_parse_s3_uri(self._config_s3_uri))['Body']
+            except Exception as e:
+                self._log.warning('Error fetching S3 config: {}'.format(str(e)))
 
     def __getitem__(self, key):
         return self._config[key]

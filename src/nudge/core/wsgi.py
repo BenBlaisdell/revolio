@@ -1,9 +1,11 @@
 import os
 
+from flask import json
+
 import nudge.core.context
 
 ctx = nudge.core.context.NudgeContext(
-    os.environ['S3_CONFIG_URI'],
+    json.loads(os.environ['S3_CONFIG_URI']),
     flask_config={
         'DEBUG': True,
     }

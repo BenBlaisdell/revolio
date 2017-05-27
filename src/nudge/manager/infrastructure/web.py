@@ -25,7 +25,8 @@ import troposphere.route53
 from cached_property import cached_property
 
 import nudge.manager.util
-from revolio.manager.stack import resource, ResourceGroup
+from revolio.manager.stack import resource, parameter, ResourceGroup
+
 
 _logger = logging.getLogger(__name__)
 
@@ -33,100 +34,104 @@ _logger = logging.getLogger(__name__)
 class WebResources(ResourceGroup):
 
     @cached_property
-    def vpc_id(self):
-        return self._config['VpcId']
+    def subnets(self):
+        return self.env.subnets
 
     @cached_property
     def authorized_ips(self):
-        return self._config['AuthorizedCidrIps']
+        return self.env.authorized_ips
 
     @cached_property
-    def subnets(self):
-        return self._config['Subnets']
-
-    @cached_property
-    def hosted_zone_name(self):
-        return self._config['HostedZoneName']
-
-    @cached_property
-    def record_set_name(self):
-        return self._config['RecordSetName']
+    def vpc_id(self):
+        return self.env.vpc_id
 
     @cached_property
     def key_name(self):
-        return self._config['KeyName']
+        return self.env.key_name
 
     @cached_property
     def ami(self):
-        return self._config['Ec2ImageId']
-
-    @cached_property
-    def ec2_instance_type(self):
-        return self._config['WebInstanceType']
+        return self.env.ami
 
     @cached_property
     def zones(self):
-        return self._config['AvailabilityZones']
+        return self.env.zones
+
+    @cached_property
+    def secrets_bucket(self):
+        return self.env.secrets.bucket
+
+    @cached_property
+    def cluster_name(self):
+        return self.config['ClusterName']
+
+    @cached_property
+    def hosted_zone_name(self):
+        return self.config['HostedZoneName']
+
+    @cached_property
+    def record_set_name(self):
+        return self.config['RecordSetName']
+
+    @cached_property
+    def ec2_instance_type(self):
+        return self.config['InstanceType']
 
     @cached_property
     def secrets_key_arn(self):
-        return self._config['SecretsKeyArn']
+        return ts.GetAtt(self.env.secrets.key, 'Arn')
 
     @cached_property
     def s3_config_uri(self):
-        return self._config['S3ConfigUri']
+        return 's3://{}/{}'.format(self.env.secrets.bucket_name, self.env.secrets.config_key)
 
     @cached_property
-    def flask_img(self):
-        return self._config['FlaskImage']
+    def flask_repo_uri(self):
+        return self.env.config['Repos']['Flask']
 
     @cached_property
-    def nginx_img(self):
-        return self._config['NginxImage']
+    def nginx_repo_uri(self):
+        return self.env.config['Repos']['Nginx']
 
     @cached_property
     def log_group_name(self):
         return self._config['LogGroupName']
 
-    @cached_property
-    def log_retention_days(self):
-        return 14
-
-    @cached_property
-    def events_queue_name(self):
-        return self._config['EventsQueueName']
-
-    def __init__(self, config):
-        super().__init__(config, prefix='Web')
-
-    @resource
-    def event_queue(self):
-        return ts.sqs.Queue(
-            self._get_logical_id('EventsQueue'),
-            QueueName=self.events_queue_name,
-            VisibilityTimeout=60*5,  # 5 minutes
-        )
+    def __init__(self, ctx, env):
+        super().__init__(ctx, env.config['Web'], prefix='Web')
+        self.env = env
 
     @resource
     def log_group(self):
         return ts.logs.LogGroup(
             self._get_logical_id('LogGroup'),
             LogGroupName=self.log_group_name,
-            RetentionInDays=self.log_retention_days,
+            RetentionInDays=14,
         )
 
     @resource
     def ecs_cluster(self):
         return ts.ecs.Cluster(
             self._get_logical_id('EcsCluster'),
-            ClusterName='nudge',
+            ClusterName=self.cluster_name,
         )
+
+    @parameter
+    def flask_image(self):
+        return ts.Parameter(
+            self._get_logical_id('FlaskImage'),
+            Type='String',
+        )
+
+    @flask_image.value
+    def flask_image_value(self):
+        return nudge.manager.util.get_latest_image_tag(self.flask_repo_uri)
 
     @cached_property
     def flask_container_def(self):
         return ts.ecs.ContainerDefinition(
             Name='flask',
-            Image=nudge.manager.util.get_latest_image_tag(self.flask_img),
+            Image=ts.Ref(self.flask_image),
             Cpu=64,
             Memory=256,
             PortMappings=[ts.ecs.PortMapping(
@@ -137,15 +142,26 @@ class WebResources(ResourceGroup):
             LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name, 'flask'),
             Environment=nudge.manager.util.env(
                 # todo: get from load location
-                S3_CONF_URI=self.s3_config_uri,
+                S3_CONFIG_URI=self.s3_config_uri,
             ),
         )
+
+    @parameter
+    def nginx_image(self):
+        return ts.Parameter(
+            self._get_logical_id('NginxImage'),
+            Type='String',
+        )
+
+    @nginx_image.value
+    def nginx_version_value(self):
+        return nudge.manager.util.get_latest_image_tag(self.nginx_repo_uri)
 
     @cached_property
     def nginx_container_def(self):
         return ts.ecs.ContainerDefinition(
             Name='nginx',
-            Image=nudge.manager.util.get_latest_image_tag(self.nginx_img),
+            Image=ts.Ref(self.nginx_image),
             Cpu=64,
             Memory=256,
             PortMappings=[ts.ecs.PortMapping(
@@ -196,7 +212,7 @@ class WebResources(ResourceGroup):
     @resource
     def ec2_instance_profile_role(self):
         return ts.iam.Role(
-            'WebInstanceProfileRole',
+            self._get_logical_id('InstanceProfileRole'),
             AssumeRolePolicyDocument=awacs.aws.Policy(
                 Statement=[awacs.helpers.trust.make_simple_assume_statement('ec2.amazonaws.com')],
             ),
@@ -219,9 +235,7 @@ class WebResources(ResourceGroup):
                         awacs.aws.Statement(
                             Effect='Allow',
                             Action=[awacs.s3.Action('*')],
-                            Resource=[
-                                'arn:aws:s3:::{}*'.format(nudge.manager.util.get_bucket(self.s3_config_uri)),
-                            ],
+                            Resource=[ts.Join('', ['arn:aws:s3:::', ts.Ref(self.secrets_bucket), '*'])],
                         ),
                     ), (
                         # allow decrypting s3 secrets
@@ -309,7 +323,7 @@ class WebResources(ResourceGroup):
     @resource
     def elastic_load_balancer(self):
         return ts.elasticloadbalancing.LoadBalancer(
-            self._get_logical_id('WebElb'),
+            self._get_logical_id('Elb'),
             CrossZone=True,
             Scheme='internet-facing',
             Subnets=self.subnets,
@@ -371,6 +385,8 @@ class WebResources(ResourceGroup):
             HealthCheckType='ELB',
             HealthCheckGracePeriod=900,
             LoadBalancerNames=[ts.Ref(self.elastic_load_balancer)],
+            # don't launch service until config is uploaded
+            # DependsOn=self.env.secrets.wait_condition.title,
         )
 
     @resource

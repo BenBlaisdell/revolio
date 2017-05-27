@@ -7,8 +7,7 @@ import awacs.helpers.trust
 import awacs.logs
 import awacs.sqs
 from cached_property import cached_property
-import revolio as rv
-from revolio import resource
+from revolio import resource, parameter, ResourceGroup
 import troposphere as ts
 import troposphere.autoscaling
 import troposphere.cloudformation
@@ -20,81 +19,78 @@ import troposphere.logs
 import nudge.manager.util
 
 
-class WorkerResources(rv.ResourceGroup):
+class WorkerResources(ResourceGroup):
 
     @cached_property
     def queue_arn(self):
-        return self._config['QueueArn']
+        return ts.GetAtt(self.env.events_queue, 'Arn')
 
     @cached_property
     def queue_url(self):
-        return self._config['QueueUrl']
+        return self.config['QueueUrl']
 
     @cached_property
     def authorized_ips(self):
-        return self._config['AuthorizedCidrIps']
+        return self.env.authorized_ips
 
     @cached_property
     def ec2_instance_type(self):
-        return self._config['WorkerInstanceType']
+        return self.config['InstanceType']
 
     @cached_property
     def vpc_id(self):
-        return self._config['VpcId']
+        return self.env.vpc_id
 
     @cached_property
     def key_name(self):
-        return self._config['KeyName']
+        return self.env.key_name
 
     @cached_property
     def ami(self):
-        return self._config['Ec2ImageId']
+        return self.env.ami
 
     @cached_property
     def subnets(self):
-        return self._config['Subnets']
+        return self.env.subnets
 
     @cached_property
     def zones(self):
-        return self._config['AvailabilityZones']
+        return self.env.zones
 
     @cached_property
     def nudge_host(self):
-        return self._config['NudgeHost']
+        return self.config['NudgeHost']
 
     @cached_property
     def nudge_port(self):
-        return self._config['NudgePort']
+        return self.config['NudgePort']
 
     @cached_property
     def nudge_version(self):
-        return self._config['NudgeVersion']
+        return self.config['NudgeVersion']
 
     @cached_property
     def cluster_name(self):
         return 'nudge-worker'
 
     @cached_property
-    def worker_img(self):
-        return self._config['WorkerImage']
+    def worker_repo_uri(self):
+        return self.env.config['Repos']['Worker']
 
     @cached_property
     def log_group_name(self):
-        return self._config['LogGroupName']
+        return self.config['LogGroupName']
 
-    @cached_property
-    def log_retention_days(self):
-        return 14
-
-    def __init__(self, config):
-        super().__init__(config, prefix='Worker')
+    def __init__(self, ctx, env):
+        super().__init__(ctx, env.config['Worker'], prefix='Worker')
+        self.env = env
 
     @resource
     def log_group(self):
         return ts.logs.LogGroup(
             self._get_logical_id('LogGroup'),
             LogGroupName=self.log_group_name,
-            RetentionInDays=self.log_retention_days,
+            RetentionInDays=14,
         )
 
     @resource
@@ -104,13 +100,24 @@ class WorkerResources(rv.ResourceGroup):
             ClusterName=self.cluster_name,
         )
 
+    @parameter
+    def worker_image(self):
+        return ts.Parameter(
+            self._get_logical_id('WorkerImage'),
+            Type='String',
+        )
+
+    @worker_image.value
+    def worker_version_value(self):
+        return nudge.manager.util.get_latest_image_tag(self.worker_repo_uri)
+
     @resource
     def ecs_task_def(self):
         return ts.ecs.TaskDefinition(
             self._get_logical_id('TaskDefinition'),
             ContainerDefinitions=[ts.ecs.ContainerDefinition(
                 Name='worker',
-                Image=nudge.manager.util.get_latest_image_tag(self.worker_img),
+                Image=ts.Ref(self.worker_image),
                 Cpu=64,
                 Memory=256,
                 LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name, 'worker'),
@@ -174,6 +181,8 @@ class WorkerResources(rv.ResourceGroup):
             MaxSize=5,
             HealthCheckType='ELB',
             HealthCheckGracePeriod=900,
+            # don't launch service until config is uploaded
+            # DependsOn=self.env.secrets.wait_condition.title,
         )
 
     @resource
@@ -267,7 +276,7 @@ class WorkerResources(rv.ResourceGroup):
     @resource
     def ec2_instance_profile_role(self):
         return ts.iam.Role(
-            'WebInstanceProfileRole',
+            self._get_logical_id('InstanceProfileRole'),
             AssumeRolePolicyDocument=awacs.aws.Policy(
                 Statement=[awacs.helpers.trust.make_simple_assume_statement('ec2.amazonaws.com')],
             ),

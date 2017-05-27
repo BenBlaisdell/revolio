@@ -1,9 +1,15 @@
+import datetime as dt
 import enum
 import json
 import os
+import random
+import string
+import uuid
 
 from cached_property import cached_property
 import ruamel.yaml as ryaml
+
+from nudge.manager.infrastructure.env import EnvResources
 
 
 class Component(enum.Enum):
@@ -18,12 +24,7 @@ class EnvName(enum.Enum):
     PROD = 'prod'
 
 
-class Stack(enum.Enum):
-    WEB = 'web'
-    REPO = 'repo'
-    S3 = 's3'
-    DB = 'db'
-    WORKER = 'worker'
+UNCHANGED_PARAM = object()
 
 
 class NudgeCommandContext(object):
@@ -35,40 +36,52 @@ class NudgeCommandContext(object):
         self._env = env_name
 
     @cached_property
+    def transaction_id(self):
+        return str(uuid.uuid4())
+
+    @cached_property
     def _base_data_path(self):
         return os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data')
 
     def get_repo_uri(self, c):
-        return self.get_architecture_config(self._get_component_stack(c))['{}Image'.format(c.value.capitalize())]
-
-    def _get_component_stack(self, c):
-        if c in [Component.FLASK, Component.NGINX]:
-            return Stack.WEB
-        if c in [Component.WORKER]:
-            return Stack.WORKER
-        else:
-            raise Exception('Unknown component')
-
-    def _get_data_path(self, *args):
-        return os.path.join(self._base_data_path, *args)
+        return self.stack_config['Repos'][c.value.capitalize()]
 
     def get_dockerfile_path(self, component):
         return self._get_data_path('dockerfiles', 'Dockerfile-{}'.format(component.name.lower()))
 
-    def save_template(self, stack, template):
-        self._save_resource('stacks/{}/template.json'.format(stack.value), template)
+    def save_template(self, template):
+        self._save_resource('stack/template.json', template)
 
-    def get_architecture_config(self, s):
-        return self._get_yaml_resource('stacks/{}/config.yaml'.format(s.value))
+    @cached_property
+    def stack(self):
+        return EnvResources(self, self.stack_config)
 
-    def get_template(self, s):
-        return self._get_string_resource('stacks/{}/template.json'.format(s.value))
+    @cached_property
+    def stack_config(self):
+        return self._get_yaml_resource('stack/config.yaml')
 
-    def get_stack_name(self, s):
-        return self._get_yaml_resource('stacks/{}/resources.yaml'.format(s.value))['StackName']
+    @cached_property
+    def raw_stack_config(self):
+        return self._get_string_resource('stack/config.yaml')
 
-    def get_stack_tags(self, s):
-        return self._get_yaml_resource('stacks/tags.yaml').items()
+    @cached_property
+    def stack_template(self):
+        return self._get_string_resource('stack/template.json')
+
+    @cached_property
+    def stack_name(self):
+        return self.stack_resources['StackName']
+
+    @cached_property
+    def stack_resources(self):
+        return self._get_yaml_resource('stack/resources.yaml')
+
+    def get_stack_parameters(self, initial):
+        return self.stack.get_parameters()
+
+    @cached_property
+    def stack_tags(self):
+        return self.stack_config['Tags']
 
     @cached_property
     def base_path(self):
@@ -78,6 +91,13 @@ class NudgeCommandContext(object):
             '..',  # nudge/src/
             '..',  # nudge/
         ))
+
+    @cached_property
+    def stack_change_set_name(self):
+        return 'nudge-change-set-{timestamp}-{uuid}'.format(
+            timestamp=dt.datetime.now().strftime('%Y-%m-%d-%H-%M-%S'),
+            uuid=uuid.uuid4(),
+        )
 
     # private
 
@@ -100,3 +120,11 @@ class NudgeCommandContext(object):
 
     def _get_resource_path(self, name):
         return os.path.join(self._r_path, 'envs', self._env.name.lower(), name)
+
+    def _get_data_path(self, *args):
+        return os.path.join(self._base_data_path, *args)
+
+
+def _generate_db_password():
+    char_set = string.ascii_uppercase + string.ascii_lowercase + string.digits
+    return ''.join(random.SystemRandom().choice(char_set) for _ in range(32))

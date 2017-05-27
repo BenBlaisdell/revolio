@@ -41,6 +41,11 @@ def get_next_image_tag(uri):
     )
 
 
+def get_latest_image_version(uri):
+    m = _ecr_re.match(uri).groupdict()
+    return _get_latest_version(m['account'], m['repo'])
+
+
 def get_latest_image_tag(uri):
     m = _ecr_re.match(uri).groupdict()
     return '{uri}:{v}'.format(

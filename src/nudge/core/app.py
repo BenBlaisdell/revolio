@@ -16,6 +16,7 @@ class App:
         functions = [
             ctx.subscribe,
             ctx.handle_object_created,
+            ctx.get_batch,
             ctx.consume,
             ctx.unsubscribe,
         ]

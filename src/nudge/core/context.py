@@ -70,7 +70,6 @@ class NudgeContext:
             db=self.db,
         )
 
-
     @cached_property
     def elem_srv(self):
         return nudge.core.entity.ElementService(
@@ -104,8 +103,8 @@ class NudgeContext:
         )
 
     @cached_property
-    def elements(self):
-        return nudge.function.elements.Elements(
+    def get_batch(self):
+        return nudge.core.function.get_batch.GetBatch(
             elem_srv=self.elem_srv,
             log=self.log,
         )

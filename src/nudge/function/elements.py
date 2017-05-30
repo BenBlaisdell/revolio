@@ -25,7 +25,8 @@ class Elements:
                     'Bucket': elem.bucket,
                     'Key': elem.key,
                     'Size': elem.size,
-                    'Created': dt.datetime.strftime(elem.created, '%Y-%m-%d %H:%M:%S'),
+                    'S3Created': dt.datetime.strftime(elem.s3_created, '%Y-%m-%d %H:%M:%S'),
+                    'Updated': dt.datetime.strftime(elem.updated, '%Y-%m-%d %H:%M:%S'),
                 }
                 for elem in elems
             ],

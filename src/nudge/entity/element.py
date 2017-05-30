@@ -79,8 +79,12 @@ class Element(Entity):
         return int(self._orm.data['size'])
 
     @property
-    def created(self):
+    def s3_created(self):
         return dt.datetime.strptime(self._orm.data['created'], '%Y-%m-%d %H:%M:%S')
+
+    @property
+    def updated(self):
+        return dt.datetime.strptime(self._orm.updated, '%Y-%m-%d %H:%M:%S')
 
     @staticmethod
     def create(sub_id, bucket, key, size, created):

@@ -38,10 +38,10 @@ VOLUME /mnt/docker-volumes
 # index all files for a quick search with 'locate'
 RUN updatedb
 
-WORKDIR /src/nudge
+WORKDIR /src/nudge/core
 
 ENV PYTHONPATH=/src:${PYTHONPATH}
 
 EXPOSE 9191
 
-CMD uwsgi --ini /src/nudge/uwsgi.ini
+CMD uwsgi --ini /src/nudge/core/uwsgi.ini

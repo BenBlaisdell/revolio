@@ -3,26 +3,27 @@ import logging
 import subprocess
 
 import boto3
-
 import nudge.manager.util
-from nudge.manager.context import Stack
 
 _logger = logging.getLogger(__name__)
 
 
-def release(ctx, component, dm_name):
-    tag = build(ctx, component, dm_name)
+def release_img(ctx, component, dm_name):
+    tag = build_img(ctx, component, dm_name)
     _push(tag)
     _logger.info('Pushed {}'.format(tag))
 
 
-def build(ctx, component, dm_name):
-    repo_uri = ctx.get_architecture_config(Stack.WEB)['{}Image'.format(component.value.capitalize())]
+def build_img(ctx, component, dm_name, *, no_cache=False):
+    repo_uri = ctx.get_repo_uri(component)
     tag = nudge.manager.util.get_next_image_tag(repo_uri)
 
     _execute_commands(
         'eval $(docker-machine env {})'.format(dm_name),
-        'docker build -f {f} -t {t} {p}'.format(
+        'docker build {flags} -f {f} -t {t} {p}'.format(
+            flags=' '.join([
+                '--no-cache' if no_cache else '',
+            ]),
             f=ctx.get_dockerfile_path(component),
             t=tag,
             p=ctx.base_path,

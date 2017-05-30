@@ -1,0 +1,39 @@
+FROM ubuntu:15.04
+MAINTAINER datawarehouse <aus-eng-data-warehouse@rmn.com>
+
+RUN apt-get update && \
+    apt-get upgrade -y
+
+RUN apt-get install -y git python-pip make build-essential wget vim curl mlocate \
+                       libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev
+
+RUN apt-get autoclean && \
+    apt-get clean && \
+    apt-get autoremove
+
+# install pyenv
+RUN git clone https://github.com/yyuu/pyenv.git ~/.pyenv && \
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc && \
+    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc && \
+    echo 'eval "$(pyenv init -)"' >> ~/.bashrc
+
+ENV HOME  /root
+ENV PYENV_ROOT $HOME/.pyenv
+ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
+
+RUN pyenv install 3.5.3
+RUN pyenv global 3.5.3
+RUN pyenv rehash
+
+RUN mkdir /nudge
+WORKDIR /nudge
+ADD ./requirements.txt /nudge/requirements.txt
+RUN pip install -r ./requirements.txt
+
+ADD . /nudge
+RUN pip install .
+
+# index all files for a quick search with 'locate'
+RUN updatedb
+
+CMD python ./src/nudge/core/worker.py

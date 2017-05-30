@@ -1,13 +1,16 @@
 import datetime as dt
 
+from nudge.entity.subscription import Subscription
 
-class Elements:
+
+class GetBatch:
+
     def __init__(self, elem_srv, log):
         self._elem_srv = elem_srv
         self._log = log
 
     def handle_request(self, request):
-        self._log.info('Handling request: Subscribe')
+        self._log.info('Handling request: GetBatch')
 
         subscription_id = request['SubscriptionId']
         assert isinstance(subscription_id, str)
@@ -21,8 +24,7 @@ class Elements:
             assert isinstance(subscription_id, int)
 
         state = request.get('State')
-        if state:
-            assert isinstance(subscription_id, str)
+        state = Subscription.State[state]
 
         gte_s3_path = request['GteS3Path']
         if gte_s3_path:
@@ -48,7 +50,7 @@ class Elements:
         }
 
     def __call__(self, subscription_id, offset, limit, state, gte_s3_path):
-        self._log.info('Handling call: Elements')
+        self._log.info('Handling call: GetBatch')
         return self._elem_srv.get_sub_elems_by_id(
             sub_id=subscription_id,
             offset=offset,

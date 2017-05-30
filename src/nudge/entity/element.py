@@ -29,14 +29,15 @@ class ElementService:
             for orm in self._db
                 .query(ElementOrm)
                 .filter(ElementOrm.sub_id == sub.id)
-                .filter(ElementOrm.state == Element.State.Unconsumed)
+                .filter(ElementOrm.state == Element.State.Unconsumed.value)
                 .all()
         ]
 
     def get_sub_elems_by_id(self, sub_id, offset=None, limit=None, state=Element.State.Unconsumed, gte_s3_key=None):
-        query = self._db.query(ElementOrm)\
-                        .filter(ElementOrm.sub_id == sub_id)\
-                        .filter(ElementOrm.state == state)
+        query = self._db \
+            .query(ElementOrm) \
+            .filter(ElementOrm.sub_id == sub_id) \
+            .filter(ElementOrm.state == state.value)
 
         query = query.filter(ElementOrm.key >= gte_s3_key) if gte_s3_key else query
         query = query.limit(limit) if limit else query

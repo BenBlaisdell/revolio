@@ -1,4 +1,3 @@
-import datetime as dt
 import json
 
 from nudge.core.entity import Element
@@ -16,18 +15,11 @@ class BatchService:
 
         self._db.flush()
 
-        msg = json.dumps({
-            'SubscriptionId': sub.id,
-            'Elements': [
-                {
-                    'Id': elem.id,
-                    'Bucket': elem.bucket,
-                    'Key': elem.key,
-                    'Size': elem.size,
-                    'Created': dt.datetime.strftime(elem.created, '%Y-%m-%d %H:%M:%S'),
-                }
-                for elem in elems
-            ],
-        })
+        if sub.custom:
+            msg = json.dumps(sub.custom)
+        else:
+            msg = json.dumps({
+                'SubscriptionId': sub.id,
+            })
 
         sub.endpoint.send_message(ctx=self._ctx, msg=msg)

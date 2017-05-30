@@ -104,6 +104,13 @@ class NudgeContext:
         )
 
     @cached_property
+    def elements(self):
+        return nudge.function.elements.Elements(
+            elem_srv=self.elem_srv,
+            log=self.log,
+        )
+
+    @cached_property
     def handle_object_created(self):
         return nudge.core.function.HandleObjectCreated(
             db=self.db,

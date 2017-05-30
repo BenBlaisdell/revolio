@@ -79,8 +79,12 @@ class Subscription(rv.Entity):
     def endpoint(self):
         return Endpoint.deserialize(self._orm.data['endpoint'])
 
+    @property
+    def custom(self):
+        return self._orm.data.get('custom', None)
+
     @staticmethod
-    def create(bucket, endpoint, *, prefix=None, regex=None, threshold=0):
+    def create(bucket, endpoint, *, prefix=None, regex=None, threshold=0, custom=None):
         return Subscription(SubscriptionOrm(
             id=str(uuid.uuid4()),
             state=Subscription.State.Active.value,
@@ -90,6 +94,7 @@ class Subscription(rv.Entity):
                 regex=regex,
                 threshold=threshold,
                 endpoint=endpoint.serialize(),
+                custom=custom,
             )
         ))
 
@@ -142,6 +147,14 @@ class SubscriptionSchema(mm.Schema):
 
     endpoint = mm.fields.Nested(
         SubscriptionEndpointSchema(),
+    )
+
+    metadata = mm.fields.Dict(
+        default=None,
+        help=' '.join(['The custom json response agreed upon'
+                       'on creation of subscription entity. This'
+                       'custom response replaces the default nudge'
+                       'message on the target endpoint/queue.'])
     )
 
     @mm.post_load

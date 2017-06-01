@@ -86,12 +86,12 @@ class WebResources(ResourceGroup):
         return 's3://{}/{}'.format(self.env.secrets.bucket_name, self.env.secrets.config_key)
 
     @cached_property
-    def flask_repo_uri(self):
-        return self.env.config['Repos']['Flask']
+    def app_repo_uri(self):
+        return self.config['Repos']['App']
 
     @cached_property
     def nginx_repo_uri(self):
-        return self.env.config['Repos']['Nginx']
+        return self.config['Repos']['Nginx']
 
     @cached_property
     def log_group_name(self):
@@ -117,21 +117,21 @@ class WebResources(ResourceGroup):
         )
 
     @parameter
-    def flask_image(self):
+    def app_image(self):
         return ts.Parameter(
-            self._get_logical_id('FlaskImage'),
+            self._get_logical_id('AppImage'),
             Type='String',
         )
 
-    @flask_image.value
-    def flask_image_value(self):
-        return nudge.manager.util.get_latest_image_tag(self.flask_repo_uri)
+    @app_image.value
+    def app_image_value(self):
+        return nudge.manager.util.get_latest_image_tag(self.app_repo_uri)
 
     @cached_property
-    def flask_container_def(self):
+    def app_container_def(self):
         return ts.ecs.ContainerDefinition(
-            Name='flask',
-            Image=ts.Ref(self.flask_image),
+            Name='app',
+            Image=ts.Ref(self.app_image),
             Cpu=64,
             Memory=256,
             PortMappings=[ts.ecs.PortMapping(
@@ -139,7 +139,7 @@ class WebResources(ResourceGroup):
                 HostPort=9091,
                 ContainerPort=9091,
             )],
-            LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name, 'flask'),
+            LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name, 'app'),
             Environment=nudge.manager.util.env(
                 # todo: get from load location
                 S3_CONFIG_URI=self.s3_config_uri,
@@ -170,7 +170,7 @@ class WebResources(ResourceGroup):
                 ContainerPort=8080,
             )],
             LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name, 'nginx'),
-            VolumesFrom=[ts.ecs.VolumesFrom(SourceContainer=self.flask_container_def.Name)],
+            VolumesFrom=[ts.ecs.VolumesFrom(SourceContainer=self.app_container_def.Name)],
         )
 
     @resource
@@ -179,7 +179,7 @@ class WebResources(ResourceGroup):
             self._get_logical_id('TaskDefinition'),
             ContainerDefinitions=[
                 self.nginx_container_def,
-                self.flask_container_def,
+                self.app_container_def,
             ],
         )
 

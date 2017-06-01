@@ -37,6 +37,7 @@ class Database:
 
     def add(self, entity):
         self._session.add(entity.orm)
+        return entity
 
     def commit(self):
         self._session.commit()

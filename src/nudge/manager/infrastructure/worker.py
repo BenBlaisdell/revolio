@@ -15,6 +15,7 @@ import troposphere.ec2
 import troposphere.ecs
 import troposphere.iam
 import troposphere.logs
+import troposphere.sqs
 
 import nudge.manager.util
 
@@ -22,12 +23,8 @@ import nudge.manager.util
 class WorkerResources(ResourceGroup):
 
     @cached_property
-    def queue_arn(self):
-        return ts.GetAtt(self.env.events_queue, 'Arn')
-
-    @cached_property
-    def queue_url(self):
-        return self.config['QueueUrl']
+    def s3e_queue_name(self):
+        return self.config['S3Events']['QueueName']
 
     @cached_property
     def authorized_ips(self):
@@ -58,24 +55,8 @@ class WorkerResources(ResourceGroup):
         return self.env.zones
 
     @cached_property
-    def nudge_host(self):
-        return self.config['NudgeHost']
-
-    @cached_property
-    def nudge_port(self):
-        return self.config['NudgePort']
-
-    @cached_property
-    def nudge_version(self):
-        return self.config['NudgeVersion']
-
-    @cached_property
     def cluster_name(self):
-        return 'nudge-worker'
-
-    @cached_property
-    def worker_repo_uri(self):
-        return self.env.config['Repos']['Worker']
+        return self.config['ClusterName']
 
     @cached_property
     def log_group_name(self):
@@ -84,6 +65,22 @@ class WorkerResources(ResourceGroup):
     def __init__(self, ctx, env):
         super().__init__(ctx, env.config['Worker'], prefix='Worker')
         self.env = env
+
+    @resource
+    def s3e_queue(self):
+        return ts.sqs.Queue(
+            self._get_logical_id('S3eQueue'),
+            QueueName=self.config['S3Events']['QueueName'],
+            VisibilityTimeout=60*5,  # 5 minutes
+        )
+
+    @resource
+    def def_queue(self):
+        return ts.sqs.Queue(
+            self._get_logical_id('DefQueue'),
+            QueueName=self.config['Deferral']['QueueName'],
+            VisibilityTimeout=60*5,  # 5 minutes
+        )
 
     @resource
     def log_group(self):
@@ -101,34 +98,58 @@ class WorkerResources(ResourceGroup):
         )
 
     @parameter
-    def worker_image(self):
+    def s3e_image(self):
         return ts.Parameter(
-            self._get_logical_id('WorkerImage'),
+            self._get_logical_id('S3eImage'),
             Type='String',
         )
 
-    @worker_image.value
-    def worker_version_value(self):
-        return nudge.manager.util.get_latest_image_tag(self.worker_repo_uri)
+    @s3e_image.value
+    def s3e_image_value(self):
+        return nudge.manager.util.get_latest_image_tag(self.config['S3Events']['Repo'])
+
+    @parameter
+    def def_image(self):
+        return ts.Parameter(
+            self._get_logical_id('DefImage'),
+            Type='String',
+        )
+
+    @def_image.value
+    def def_image_value(self):
+        return nudge.manager.util.get_latest_image_tag(self.config['Deferral']['Repo'])
 
     @resource
     def ecs_task_def(self):
         return ts.ecs.TaskDefinition(
             self._get_logical_id('TaskDefinition'),
-            ContainerDefinitions=[ts.ecs.ContainerDefinition(
-                Name='worker',
-                Image=ts.Ref(self.worker_image),
-                Cpu=64,
-                Memory=256,
-                LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name, 'worker'),
-                Environment=nudge.manager.util.env(
-                    # todo: get from load location
-                    NUDGE_HOST=self.nudge_host,
-                    NUDGE_PORT=self.nudge_port,
-                    NUDGE_VERSION=self.nudge_version,
-                    NUDGE_NOTIFICATION_QUEUE_URL=self.queue_url,
+            ContainerDefinitions=[
+                ts.ecs.ContainerDefinition(
+                    Name='s3e',
+                    Image=ts.Ref(self.s3e_image),
+                    Cpu=64,
+                    Memory=256,
+                    LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name, 's3e'),
+                    Environment=nudge.manager.util.env(
+                        # todo: get from load location
+                        NDG_WRK_S3E_HOST=self.config['S3Events']['Env']['NudgeHost'],
+                        NDG_WRK_S3E_PORT=self.config['S3Events']['Env']['NudgePort'],
+                        NDG_WRK_S3E_VERSION=self.config['S3Events']['Env']['NudgeVersion'],
+                        NDG_WKR_S3E_QUEUE_URL=self.config['S3Events']['Env']['QueueUrl'],
+                    ),
                 ),
-            )],
+                ts.ecs.ContainerDefinition(
+                    Name='def',
+                    Image=ts.Ref(self.def_image),
+                    Cpu=64,
+                    Memory=256,
+                    LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name, 'def'),
+                    Environment=nudge.manager.util.env(
+                        # todo: get from load location
+                        NDG_WRK_DEF_QUEUE_URL=self.config['Deferral']['Env']['QueueUrl'],
+                    ),
+                ),
+            ],
         )
 
     @resource
@@ -299,7 +320,10 @@ class WorkerResources(ResourceGroup):
                         awacs.aws.Statement(
                             Effect='Allow',
                             Action=[awacs.sqs.Action('*')],
-                            Resource=[self.queue_arn],
+                            Resource=[
+                                ts.GetAtt(self.s3e_queue, 'Arn'),
+                                ts.GetAtt(self.def_queue, 'Arn'),
+                            ],
                         ),
                     ), (
                         # register instance in cluster

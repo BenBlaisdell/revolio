@@ -1,12 +1,20 @@
+import revolio as rv
+
 from nudge.core.entity import Element
 
 
-class Consume:
+class Consume(rv.Function):
 
     def __init__(self, log, elem_srv, db):
+        super().__init__()
         self._log = log
         self._elem_srv = elem_srv
         self._db = db
+
+    def format_request(self, elem_ids):
+        return {
+            'ElementIds': elem_ids,
+        }
 
     def handle_request(self, request):
         self._log.info('Handling request: Consume')

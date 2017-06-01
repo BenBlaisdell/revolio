@@ -13,15 +13,16 @@ from nudge.manager.infrastructure.env import EnvResources
 
 
 class Component(enum.Enum):
-    FLASK = 'flask'
-    NGINX = 'nginx'
-    WORKER = 'worker'
+    APP = ('web', 'app')
+    NGX = ('web', 'ngx')
+    S3E = ('wrk', 's3e')
+    DEF = ('wrk', 'def')
 
 
 class EnvName(enum.Enum):
     DEV = 'dev'
-    STAGE = 'stage'
-    PROD = 'prod'
+    STG = 'stg'
+    PRD = 'prd'
 
 
 UNCHANGED_PARAM = object()
@@ -44,10 +45,12 @@ class NudgeCommandContext(object):
         return os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data')
 
     def get_repo_uri(self, c):
-        return self.stack_config['Repos'][c.value.capitalize()]
+        a, b = c.value
+        return self.stack_config['Ecr']['Repos'][a.capitalize()][b.capitalize()]['Url']
 
     def get_dockerfile_path(self, component):
-        return self._get_data_path('dockerfiles', 'Dockerfile-{}'.format(component.name.lower()))
+        a, b = component.value
+        return self._get_data_path('dockerfiles', 'Dockerfile-{}-{}'.format(a, b))
 
     def save_template(self, template):
         self._save_resource('stack/template.json', template)
@@ -119,7 +122,7 @@ class NudgeCommandContext(object):
             f.write(data)
 
     def _get_resource_path(self, name):
-        return os.path.join(self._r_path, 'envs', self._env.name.lower(), name)
+        return os.path.join(self._r_path, 'envs', self._env.value.lower(), name)
 
     def _get_data_path(self, *args):
         return os.path.join(self._base_data_path, *args)

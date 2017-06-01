@@ -1,5 +1,6 @@
 import json
 import os
+import pathlib as pl
 
 import flask
 import nudge.core.context
@@ -8,6 +9,7 @@ import nudge.core.context
 class App:
 
     def __init__(self, ctx, flask_config, db, log):
+        self._ctx = ctx
         self._log = log
 
         self._app = flask.Flask('nudge')
@@ -50,14 +52,33 @@ class App:
         return self._app
 
     def _add_function(self, f):
-        name = type(f).__name__
-        endpoint = '/api/1/call/{}/'.format(name)
+        endpoint = self.get_url_path(f)
         self._log.info('Adding endpoint: {}'.format(endpoint))
         self._app.add_url_rule(
             endpoint,
-            name,
+            f.name,
             lambda: json.dumps(f.handle_request(flask.request.get_json(force=True))),
             methods=['POST'],
+        )
+
+    @property
+    def url_prefix(self):
+        return '/api/{}'.format(self.api_version)
+
+    @property
+    def api_version(self):
+        return self._ctx.config['Web']['Version']
+
+    def get_url_path(self, func):
+        return '{prefix}/call/{name}/'.format(
+            prefix=self.url_prefix,
+            name=type(func).__name__,
+        )
+
+    def get_url(self, func):
+        return '{host}/{path}'.format(
+            host=self._ctx.config['Web']['RecordSetName'],
+            path=self.get_url_path(func),
         )
 
 

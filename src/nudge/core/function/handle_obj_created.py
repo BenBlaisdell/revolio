@@ -1,16 +1,27 @@
 import datetime as dt
 
+import revolio as rv
+
 from nudge.core.entity import Element
 
 
-class HandleObjectCreated:
+class HandleObjectCreated(rv.Function):
 
     def __init__(self, db, sub_srv, batch_srv, elem_srv, log):
+        super().__init__()
         self._db = db
         self._sub_srv = sub_srv
         self._batch_srv = batch_srv
         self._elem_srv = elem_srv
         self._log = log
+
+    def format_request(self, bucket, key, size, created):
+        return {
+            'Bucket': bucket,
+            'Key': key,
+            'Size': size,
+            'Created': created,
+        }
 
     def handle_request(self, request):
         self._log.info('Handling request: HandleObjectCreated')

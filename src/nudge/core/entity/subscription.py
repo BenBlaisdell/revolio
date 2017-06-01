@@ -10,35 +10,6 @@ from nudge.core.endpoint import Endpoint
 from nudge.core.orm import SubscriptionOrm
 
 
-class SubscriptionService:
-
-    def __init__(self, db):
-        super(SubscriptionService, self).__init__()
-        self._db = db
-
-    def get_subscription(self, sub_id):
-        orm = self._db \
-            .query(SubscriptionOrm) \
-            .get(sub_id)
-
-        if orm is None:
-            raise Exception('No subscription with id {}'.format(sub_id))
-
-        return Subscription(orm)
-
-    def find_matching_subscriptions(self, bucket, key):
-        subs = [
-            Subscription(orm)
-            for orm in self._db
-                .query(SubscriptionOrm)
-                .filter(SubscriptionOrm.bucket == bucket)
-                .filter(sa.sql.expression.bindparam('k', key).startswith(SubscriptionOrm.prefix))
-                .all()
-        ]
-
-        return filter(lambda s: s.matches(bucket, key), subs)
-
-
 class Subscription(rv.Entity):
 
     @property
@@ -161,3 +132,32 @@ class SubscriptionSchema(mm.Schema):
     @mm.post_load
     def return_subscription_entity(self, data):
         return Subscription.create(**data)
+
+
+class SubscriptionService:
+
+    def __init__(self, db):
+        super(SubscriptionService, self).__init__()
+        self._db = db
+
+    def get_subscription(self, sub_id):
+        orm = self._db \
+            .query(SubscriptionOrm) \
+            .get(sub_id)
+
+        if orm is None:
+            raise Exception('No subscription with id {}'.format(sub_id))
+
+        return Subscription(orm)
+
+    def find_matching_subscriptions(self, bucket, key):
+        subs = [
+            Subscription(orm)
+            for orm in self._db
+                .query(SubscriptionOrm)
+                .filter(SubscriptionOrm.bucket == bucket)
+                .filter(sa.sql.expression.bindparam('k', key).startswith(SubscriptionOrm.prefix))
+                .all()
+        ]
+
+        return filter(lambda s: s.matches(bucket, key), subs)

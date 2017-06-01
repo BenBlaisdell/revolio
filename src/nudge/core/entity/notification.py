@@ -7,6 +7,29 @@ import sqlalchemy.orm.exc
 from nudge.core.orm import NotificationOrm
 
 
+class Notification(rv.Entity):
+
+    @property
+    def bucket(self):
+        return self._orm.bucket
+
+    @property
+    def prefix(self):
+        return self._orm.prefix
+
+    @property
+    def config_id(self):
+        return self._orm.config_id
+
+    @staticmethod
+    def create(bucket, prefix):
+        return Notification(NotificationOrm(
+            bucket=bucket,
+            prefix=prefix,
+            config_id='nudge-notification-{}'.format(str(uuid.uuid4())),
+        ))
+
+
 class NotificationService:
 
     def __init__(self, db):
@@ -34,26 +57,3 @@ class NotificationService:
             raise Exception('Found overlapping notifications covering {}'.format(nfn))
 
         return Notification(orm) if (orm is not None) else None
-
-
-class Notification(rv.Entity):
-
-    @property
-    def bucket(self):
-        return self._orm.bucket
-
-    @property
-    def prefix(self):
-        return self._orm.prefix
-
-    @property
-    def config_id(self):
-        return self._orm.config_id
-
-    @staticmethod
-    def create(bucket, prefix):
-        return Notification(NotificationOrm(
-            bucket=bucket,
-            prefix=prefix,
-            config_id='nudge-notification-{}'.format(str(uuid.uuid4())),
-        ))

@@ -29,7 +29,7 @@ class Trigger(rv.Function):
         endpoint = Endpoint.deserialize(request['Endpoint'])
 
         threshold = request.get('Threshold', None)
-        assert isinstance(threshold, int) or (threshold is None)
+        assert isinstance(threshold, int)
 
         # make call
 
@@ -50,10 +50,8 @@ class Trigger(rv.Function):
 
         sub = self._sub_srv.get_subscription(sub_id)
         subscription_data = sub.data.copy()
-        if endpoint:
-            sub['endpoint'] = endpoint
-        if threshold:
-            sub['threshold'] = threshold
+        sub['endpoint'] = endpoint
+        sub['threshold'] = threshold
         sub.data = subscription_data
 
         self._db.commit()

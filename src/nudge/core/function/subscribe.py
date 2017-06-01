@@ -64,7 +64,7 @@ class Subscribe(rv.Function):
             'SubscriptionId': sub.id,
         }
 
-    def __call__(self, bucket, endpoint, *, prefix=None, regex=None, threshold=0, custom=None, backfill=False):
+    def __call__(self, bucket, endpoint=None, *, prefix=None, regex=None, threshold=0, custom=None, backfill=False):
         self._log.info('Handling call: Subscribe')
 
         sub = Subscription.create(

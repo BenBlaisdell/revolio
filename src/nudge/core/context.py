@@ -11,7 +11,6 @@ import nudge.core.entity
 import nudge.core.function
 import nudge.core.log
 
-
 class NudgeContext:
 
     def __init__(self, config_s3_uri, *, flask_config=None):
@@ -119,6 +118,14 @@ class NudgeContext:
             sub_srv=self.sub_srv,
             s3=self.s3,
             deferral=self.deferral,
+        )
+
+    @cached_property
+    def trigger(self):
+        return nudge.core.function.Trigger(
+            db=self.db,
+            sub_srv=self.sub_srv,
+            log=self.log,
         )
 
     @cached_property

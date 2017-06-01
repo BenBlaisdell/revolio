@@ -28,16 +28,16 @@ class GetBatch(rv.Function):
         assert isinstance(subscription_id, str)
 
         offset = request.get('Offset', 0)
-        assert isinstance(subscription_id, int)
+        assert isinstance(offset, int)
 
         limit = request.get('Limit', None)
-        assert isinstance(subscription_id, int) or (limit is None)
+        assert isinstance(limit, int) or (limit is None)
 
         state = request.get('State', None)
         state = Subscription.State[state] if (state is not None) else None
 
         gte_s3_path = request.get('GteS3Path', None)
-        assert isinstance(subscription_id, str) or (gte_s3_path is not None)
+        assert isinstance(gte_s3_path, str) or (gte_s3_path is None)
 
         # make call
         elems = self(subscription_id=subscription_id, offset=offset, limit=limit, state=state, gte_s3_path=gte_s3_path)

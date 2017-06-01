@@ -1,12 +1,20 @@
+import revolio as rv
+
 from nudge.core.entity import Subscription
 
 
-class Unsubscribe:
+class Unsubscribe(rv.Function):
 
     def __init__(self, db, sub_srv, log):
+        super().__init__()
         self._db = db
         self._sub_srv = sub_srv
         self._log = log
+
+    def format_request(self, sub_id):
+        return {
+            'SubscriptionId': sub_id,
+        }
 
     def handle_request(self, request):
         self._log.info('Handling request: Unsubscribe')

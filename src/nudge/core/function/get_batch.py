@@ -1,13 +1,25 @@
 import datetime as dt
 
+import revolio as rv
+
 from nudge.core.entity.subscription import Subscription
 
 
-class GetBatch:
+class GetBatch(rv.Function):
 
     def __init__(self, elem_srv, log):
+        super().__init__()
         self._elem_srv = elem_srv
         self._log = log
+
+    def format_request(self, sub_id, *, offset=0, limit=None, state=None, gte_s3_path=None):
+        return {
+            'SubscriptionId': sub_id,
+            'Offset': offset,
+            'Limit': limit,
+            'State': state.value if (state is not None) else None,
+            'GteS3Path': gte_s3_path,
+        }
 
     def handle_request(self, request):
         self._log.info('Handling request: GetBatch')
@@ -15,20 +27,17 @@ class GetBatch:
         subscription_id = request['SubscriptionId']
         assert isinstance(subscription_id, str)
 
-        offset = request.get('Offset')
-        if offset:
-            assert isinstance(subscription_id, int)
+        offset = request.get('Offset', 0)
+        assert isinstance(subscription_id, int)
 
-        limit = request.get('Limit')
-        if limit:
-            assert isinstance(subscription_id, int)
+        limit = request.get('Limit', None)
+        assert isinstance(subscription_id, int) or (limit is None)
 
-        state = request.get('State')
-        state = Subscription.State[state]
+        state = request.get('State', None)
+        state = Subscription.State[state] if (state is not None) else None
 
-        gte_s3_path = request['GteS3Path']
-        if gte_s3_path:
-            assert isinstance(subscription_id, str)
+        gte_s3_path = request.get('GteS3Path', None)
+        assert isinstance(subscription_id, str) or (gte_s3_path is not None)
 
         # make call
         elems = self(subscription_id=subscription_id, offset=offset, limit=limit, state=state, gte_s3_path=gte_s3_path)
@@ -49,10 +58,10 @@ class GetBatch:
             ],
         }
 
-    def __call__(self, subscription_id, offset, limit, state, gte_s3_path):
+    def __call__(self, sub_id, *, offset=0, limit=None, state=None, gte_s3_path=None):
         self._log.info('Handling call: GetBatch')
         return self._elem_srv.get_sub_elems_by_id(
-            sub_id=subscription_id,
+            sub_id=sub_id,
             offset=offset,
             limit=limit,
             state=state,

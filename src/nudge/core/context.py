@@ -6,6 +6,7 @@ import nudge.core.app
 import nudge.core.batch
 import nudge.core.config
 import nudge.core.db
+import nudge.core.deferral
 import nudge.core.entity
 import nudge.core.function
 import nudge.core.log
@@ -93,6 +94,14 @@ class NudgeContext:
     def log(self):
         return nudge.core.log.LogService()
 
+    @cached_property
+    def deferral(self):
+        return nudge.core.deferral.DeferralSrv(
+            app=self.app,
+            sqs=self.sqs,
+            queue_url=self.config['DeferralQueueUrl'],
+        )
+
     # functions
 
     @cached_property
@@ -103,10 +112,13 @@ class NudgeContext:
         )
 
     @cached_property
-    def get_batch(self):
-        return nudge.core.function.get_batch.GetBatch(
-            elem_srv=self.elem_srv,
+    def backfill(self):
+        return nudge.core.function.Backfill(
+            db=self.db,
             log=self.log,
+            sub_srv=self.sub_srv,
+            s3=self.s3,
+            deferral=self.deferral,
         )
 
     @cached_property
@@ -115,6 +127,13 @@ class NudgeContext:
             db=self.db,
             sub_srv=self.sub_srv,
             batch_srv=self.batch_srv,
+            elem_srv=self.elem_srv,
+            log=self.log,
+        )
+
+    @cached_property
+    def get_batch(self):
+        return nudge.core.function.get_batch.GetBatch(
             elem_srv=self.elem_srv,
             log=self.log,
         )

@@ -46,6 +46,7 @@ class Subscription(rv.Entity):
         return self._orm.id
 
     class State(enum.Enum):
+        Backfilling = 'Backfilling'
         Active = 'Active'
         Inactive = 'Inactive'
 

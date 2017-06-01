@@ -36,4 +36,4 @@ RUN pip install .
 # index all files for a quick search with 'locate'
 RUN updatedb
 
-CMD python ./src/nudge/core/worker.py
+CMD python ./src/nudge/worker/deferral.py

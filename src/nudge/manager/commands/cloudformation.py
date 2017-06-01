@@ -34,7 +34,23 @@ def create_stack(ctx):
     _log_stack_status(ctx)
 
 
-def update_stack(ctx):
+def update_stack(ctx, change_set):
+    if change_set:
+        _change_set_update(ctx)
+    else:
+        _blind_update(ctx)
+
+
+def _blind_update(ctx):
+    cf_client.update_stack(
+        **_get_stack_call_params(ctx, False),
+    )
+
+    prev_event = cf_client.describe_stack_events(StackName=ctx.stack_name)['StackEvents'][0]['EventId']
+    _log_stack_status(ctx, prev_event=prev_event)
+
+
+def _change_set_update(ctx):
     cf_client.create_change_set(
         ChangeSetName=ctx.stack_change_set_name,
         **_get_stack_call_params(ctx, False),
@@ -46,7 +62,14 @@ def update_stack(ctx):
     _logger.info(json.dumps(changes, sort_keys=True, indent=4, separators=(',', ': ')))
 
     if _user_prompted_update():
-        _update_stack(ctx)
+        prev_event = cf_client.describe_stack_events(StackName=ctx.stack_name)['StackEvents'][0]['EventId']
+
+        cf_client.execute_change_set(
+            ChangeSetName=ctx.stack_change_set_name,
+            StackName=ctx.stack_name,
+        )
+
+        _log_stack_status(ctx, prev_event=prev_event)
 
 
 def _get_stack_call_params(ctx, initial):
@@ -69,17 +92,6 @@ def _get_stack_call_params(ctx, initial):
         ],
         Capabilities=['CAPABILITY_IAM'],
     )
-
-
-def _update_stack(ctx):
-    prev_event = cf_client.describe_stack_events(StackName=ctx.stack_name)['StackEvents'][0]['EventId']
-
-    cf_client.execute_change_set(
-        ChangeSetName=ctx.stack_change_set_name,
-        StackName=ctx.stack_name,
-    )
-
-    _log_stack_status(ctx, prev_event=prev_event)
 
 
 def _log_stack_status(ctx, *, prev_event=None):

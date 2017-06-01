@@ -5,8 +5,8 @@ from nudge.core.entity import Subscription, Element
 
 class Backfill(rv.Function):
 
-    def __init__(self, db, log, sub_srv, s3, deferral):
-        super().__init__()
+    def __init__(self, ctx, db, log, sub_srv, s3, deferral):
+        super().__init__(ctx)
         self._db = db
         self._log = log
         self._sub_srv = sub_srv
@@ -61,8 +61,8 @@ class Backfill(rv.Function):
         if not backfill_complete:
             self._deferral.send_call(
                 self,
-                SubscriptionId=sub.id,
-                ContinuationToken=r['ContinuationToken'],
+                sub.id,
+                token=r['ContinuationToken'],
             )
 
         elems = [

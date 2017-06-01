@@ -5,8 +5,8 @@ from nudge.core.entity import Element
 
 class Consume(rv.Function):
 
-    def __init__(self, log, elem_srv, db):
-        super().__init__()
+    def __init__(self, ctx, log, elem_srv, db):
+        super().__init__(ctx)
         self._log = log
         self._elem_srv = elem_srv
         self._db = db

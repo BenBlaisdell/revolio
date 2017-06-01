@@ -7,8 +7,8 @@ from nudge.core.entity import Element
 
 class HandleObjectCreated(rv.Function):
 
-    def __init__(self, db, sub_srv, batch_srv, elem_srv, log):
-        super().__init__()
+    def __init__(self, ctx, db, sub_srv, batch_srv, elem_srv, log):
+        super().__init__(ctx)
         self._db = db
         self._sub_srv = sub_srv
         self._batch_srv = batch_srv

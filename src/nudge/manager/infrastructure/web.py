@@ -11,6 +11,7 @@ import awacs.helpers.trust
 import awacs.kms
 import awacs.logs
 import awacs.s3
+import awacs.sqs
 import troposphere as ts
 import troposphere.autoscaling
 import troposphere.cloudformation
@@ -230,8 +231,25 @@ class WebResources(ResourceGroup):
                     ),
                 ) for name, statement in [
                     (
+                        'access-deferral-queue',
+                        awacs.aws.Statement(
+                            Effect='Allow',
+                            Action=[awacs.sqs.Action('*')],
+                            Resource=[ts.GetAtt(self.env.worker.def_worker.queue, 'Arn')],
+                        ),
+                    ), (
+                        'read-all-s3',
+                        awacs.aws.Statement(
+                            Effect='Allow',
+                            Action=[
+                                awacs.s3.Action('List*'),
+                                awacs.s3.Action('Get*'),
+                            ],
+                            Resource=['*'],
+                        ),
+                    ), (
                         # allow pulling s3 config
-                        'access-s3-resources',
+                        'access-secrets-bucket',
                         awacs.aws.Statement(
                             Effect='Allow',
                             Action=[awacs.s3.Action('*')],
@@ -294,6 +312,12 @@ class WebResources(ResourceGroup):
             )],
             Role=ts.Ref(self.ecs_service_role),
             TaskDefinition=ts.Ref(self.ecs_task_def),
+            # allow ecs to stop and replace tasks
+            # port usage prevents replacement otherwise
+            DeploymentConfiguration=ts.ecs.DeploymentConfiguration(
+                MaximumPercent=100,
+                MinimumHealthyPercent=50,
+            ),
         )
 
     @resource

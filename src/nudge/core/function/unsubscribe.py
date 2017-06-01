@@ -5,8 +5,8 @@ from nudge.core.entity import Subscription
 
 class Unsubscribe(rv.Function):
 
-    def __init__(self, db, sub_srv, log):
-        super().__init__()
+    def __init__(self, ctx, db, sub_srv, log):
+        super().__init__(ctx)
         self._db = db
         self._sub_srv = sub_srv
         self._log = log

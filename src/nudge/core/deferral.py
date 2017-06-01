@@ -3,17 +3,25 @@ from flask import json
 
 class DeferralSrv:
 
-    def __init__(self, app, sqs, queue_url):
+    def __init__(self, log, sqs, queue_url):
         super().__init__()
-        self._app = app
+        self._log = log
         self._sqs = sqs
         self._queue_url = queue_url
 
-    def __call__(self, func, *args, **kwargs):
+    def send_call(self, func, *args, **kwargs):
+        url = func.url
+        body = func.format_request(*args, **kwargs)
+
+        self._log.info('Sending deferred call:\n\t{url}\n\t{body}'.format(
+            url=url,
+            body=body,
+        ))
+
         self._sqs.send_message(
             QueueUrl=self._queue_url,
             MessageBody=json.dumps({
-                'Url': self._app.get_url(func),
-                'Body': func.format_request(*args, **kwargs),
+                'Url': url,
+                'Body': body,
             }),
         )

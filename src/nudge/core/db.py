@@ -30,9 +30,11 @@ class Database:
         self.create_tables()
 
     def create_tables(self):
+        self._log.info('Creating tables')
         EntityOrm.metadata.create_all(bind=self._engine)
 
     def drop_tables(self):
+        self._log.info('Dropping tables')
         EntityOrm.metadata.drop_all(bind=self._engine)
 
     def add(self, entity):

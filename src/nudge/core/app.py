@@ -1,6 +1,7 @@
 import json
 import os
 import pathlib as pl
+import traceback
 
 import flask
 import nudge.core.context
@@ -34,16 +35,27 @@ class App:
             methods=['GET'],
         )
 
+        @self._app.errorhandler(500)
+        def log_exception(exception):
+            self._log.warning(traceback.format_exc())
+
         db.init_app(self._app)
         self._db = db
+
+    def __call__(self, environ, start_response):
+        """Start app under uwsgi"""
+        # with self._app.app_context():
+        #     self._db.create_tables()
+
+        return self.flask_app(environ, start_response)
 
     @property
     def config(self):
         return self._app.config
 
     def run(self):
-        with self._app.app_context():
-            self._db.create_tables()
+        # with self._app.app_context():
+        #     self._db.create_tables()
 
         self._app.run()
 
@@ -52,33 +64,13 @@ class App:
         return self._app
 
     def _add_function(self, f):
-        endpoint = self.get_url_path(f)
+        endpoint = f.url_path
         self._log.info('Adding endpoint: {}'.format(endpoint))
         self._app.add_url_rule(
             endpoint,
             f.name,
             lambda: json.dumps(f.handle_request(flask.request.get_json(force=True))),
             methods=['POST'],
-        )
-
-    @property
-    def url_prefix(self):
-        return '/api/{}'.format(self.api_version)
-
-    @property
-    def api_version(self):
-        return self._ctx.config['Web']['Version']
-
-    def get_url_path(self, func):
-        return '{prefix}/call/{name}/'.format(
-            prefix=self.url_prefix,
-            name=type(func).__name__,
-        )
-
-    def get_url(self, func):
-        return '{host}/{path}'.format(
-            host=self._ctx.config['Web']['RecordSetName'],
-            path=self.get_url_path(func),
         )
 
 

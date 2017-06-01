@@ -2,14 +2,16 @@ import revolio as rv
 
 from nudge.core.endpoint import Endpoint
 from nudge.core.entity import Subscription
+import nudge.core.function
 
 
 class Subscribe(rv.Function):
 
-    def __init__(self, db, log):
-        super().__init__()
+    def __init__(self, ctx, db, log, deferral):
+        super().__init__(ctx)
         self._db = db
         self._log = log
+        self._deferral = deferral
 
     def format_request(self, bucket, endpoint, *, prefix=None, regex=None, threshold=0, custom=None, backfill=False):
         return {
@@ -77,9 +79,11 @@ class Subscribe(rv.Function):
         )
 
         self._db.add(sub)
-        self._db.flush()
 
-        # send backfill call
+        if backfill:
+            sub.state = Subscription.State.Backfilling
+            self._db.flush()
+            self._deferral.send_call(self._ctx.backfill, sub.id)
 
         self._db.commit()
 

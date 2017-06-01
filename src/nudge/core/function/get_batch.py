@@ -7,8 +7,8 @@ from nudge.core.entity.subscription import Subscription
 
 class GetBatch(rv.Function):
 
-    def __init__(self, elem_srv, log):
-        super().__init__()
+    def __init__(self, ctx, elem_srv, log):
+        super().__init__(ctx)
         self._elem_srv = elem_srv
         self._log = log
 

@@ -42,16 +42,17 @@ def build_template(cmd_ctx):
 
 @cli.command('create-stack')
 @click.pass_obj
-def update_stack(cmd_ctx):
+def create_stack(cmd_ctx):
     commands.build_template(cmd_ctx)
     commands.create_stack(cmd_ctx)
 
 
 @cli.command('update-stack')
+@click.option('--blind', '-b', is_flag=True)
 @click.pass_obj
-def update_stack(cmd_ctx):
+def update_stack(cmd_ctx, blind):
     commands.build_template(cmd_ctx)
-    commands.update_stack(cmd_ctx)
+    commands.update_stack(cmd_ctx, change_set=(not blind))
 
 
 @cli.command('build-ecr')

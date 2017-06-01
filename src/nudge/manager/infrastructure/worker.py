@@ -7,7 +7,10 @@ import awacs.helpers.trust
 import awacs.logs
 import awacs.sqs
 from cached_property import cached_property
-from revolio import resource, parameter, ResourceGroup
+
+from nudge.manager.infrastructure.deferral import DeferralWorkerResources
+from nudge.manager.infrastructure.s3_events import S3EventsWorkerResources
+from revolio import resource, resource_group, parameter, ResourceGroup
 import troposphere as ts
 import troposphere.autoscaling
 import troposphere.cloudformation
@@ -21,10 +24,6 @@ import nudge.manager.util
 
 
 class WorkerResources(ResourceGroup):
-
-    @cached_property
-    def s3e_queue_name(self):
-        return self.config['S3Events']['QueueName']
 
     @cached_property
     def authorized_ips(self):
@@ -66,20 +65,22 @@ class WorkerResources(ResourceGroup):
         super().__init__(ctx, env.config['Worker'], prefix='Worker')
         self.env = env
 
-    @resource
-    def s3e_queue(self):
-        return ts.sqs.Queue(
-            self._get_logical_id('S3eQueue'),
-            QueueName=self.config['S3Events']['QueueName'],
-            VisibilityTimeout=60*5,  # 5 minutes
+    @resource_group
+    def s3e_worker(self):
+        return S3EventsWorkerResources(
+            self._ctx,
+            self.env,
+            self.ecs_cluster,
+            self.log_group_name,
         )
 
-    @resource
-    def def_queue(self):
-        return ts.sqs.Queue(
-            self._get_logical_id('DefQueue'),
-            QueueName=self.config['Deferral']['QueueName'],
-            VisibilityTimeout=60*5,  # 5 minutes
+    @resource_group
+    def def_worker(self):
+        return DeferralWorkerResources(
+            self._ctx,
+            self.env,
+            self.ecs_cluster,
+            self.log_group_name,
         )
 
     @resource
@@ -95,61 +96,6 @@ class WorkerResources(ResourceGroup):
         return ts.ecs.Cluster(
             self._get_logical_id('EcsCluster'),
             ClusterName=self.cluster_name,
-        )
-
-    @parameter
-    def s3e_image(self):
-        return ts.Parameter(
-            self._get_logical_id('S3eImage'),
-            Type='String',
-        )
-
-    @s3e_image.value
-    def s3e_image_value(self):
-        return nudge.manager.util.get_latest_image_tag(self.config['S3Events']['Repo'])
-
-    @parameter
-    def def_image(self):
-        return ts.Parameter(
-            self._get_logical_id('DefImage'),
-            Type='String',
-        )
-
-    @def_image.value
-    def def_image_value(self):
-        return nudge.manager.util.get_latest_image_tag(self.config['Deferral']['Repo'])
-
-    @resource
-    def ecs_task_def(self):
-        return ts.ecs.TaskDefinition(
-            self._get_logical_id('TaskDefinition'),
-            ContainerDefinitions=[
-                ts.ecs.ContainerDefinition(
-                    Name='s3e',
-                    Image=ts.Ref(self.s3e_image),
-                    Cpu=64,
-                    Memory=256,
-                    LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name, 's3e'),
-                    Environment=nudge.manager.util.env(
-                        # todo: get from load location
-                        NDG_WRK_S3E_HOST=self.config['S3Events']['Env']['NudgeHost'],
-                        NDG_WRK_S3E_PORT=self.config['S3Events']['Env']['NudgePort'],
-                        NDG_WRK_S3E_VERSION=self.config['S3Events']['Env']['NudgeVersion'],
-                        NDG_WKR_S3E_QUEUE_URL=self.config['S3Events']['Env']['QueueUrl'],
-                    ),
-                ),
-                ts.ecs.ContainerDefinition(
-                    Name='def',
-                    Image=ts.Ref(self.def_image),
-                    Cpu=64,
-                    Memory=256,
-                    LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name, 'def'),
-                    Environment=nudge.manager.util.env(
-                        # todo: get from load location
-                        NDG_WRK_DEF_QUEUE_URL=self.config['Deferral']['Env']['QueueUrl'],
-                    ),
-                ),
-            ],
         )
 
     @resource
@@ -170,15 +116,6 @@ class WorkerResources(ResourceGroup):
                     self.authorized_ips,
                 )
             ],
-        )
-
-    @resource
-    def ecs_service(self):
-        return ts.ecs.Service(
-            self._get_logical_id('EcsService'),
-            Cluster=ts.Ref(self.ecs_cluster),
-            DesiredCount=2,
-            TaskDefinition=ts.Ref(self.ecs_task_def),
         )
 
     # ec2 instance autoscaling
@@ -321,8 +258,8 @@ class WorkerResources(ResourceGroup):
                             Effect='Allow',
                             Action=[awacs.sqs.Action('*')],
                             Resource=[
-                                ts.GetAtt(self.s3e_queue, 'Arn'),
-                                ts.GetAtt(self.def_queue, 'Arn'),
+                                ts.GetAtt(self.s3e_worker.queue, 'Arn'),
+                                ts.GetAtt(self.def_worker.queue, 'Arn'),
                             ],
                         ),
                     ), (

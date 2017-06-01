@@ -96,9 +96,9 @@ class NudgeContext:
     @cached_property
     def deferral(self):
         return nudge.core.deferral.DeferralSrv(
-            app=self.app,
+            log=self.log,
             sqs=self.sqs,
-            queue_url=self.config['DeferralQueueUrl'],
+            queue_url=self.config['Worker']['Deferral']['Env']['QueueUrl'],
         )
 
     # functions
@@ -106,13 +106,16 @@ class NudgeContext:
     @cached_property
     def subscribe(self):
         return nudge.core.function.Subscribe(
+            ctx=self,
             db=self.db,
             log=self.log,
+            deferral=self.deferral,
         )
 
     @cached_property
     def backfill(self):
         return nudge.core.function.Backfill(
+            ctx=self,
             db=self.db,
             log=self.log,
             sub_srv=self.sub_srv,
@@ -131,6 +134,7 @@ class NudgeContext:
     @cached_property
     def handle_object_created(self):
         return nudge.core.function.HandleObjectCreated(
+            ctx=self,
             db=self.db,
             sub_srv=self.sub_srv,
             batch_srv=self.batch_srv,
@@ -141,6 +145,7 @@ class NudgeContext:
     @cached_property
     def get_batch(self):
         return nudge.core.function.get_batch.GetBatch(
+            ctx=self,
             elem_srv=self.elem_srv,
             log=self.log,
         )
@@ -148,6 +153,7 @@ class NudgeContext:
     @cached_property
     def consume(self):
         return nudge.core.function.Consume(
+            ctx=self,
             log=self.log,
             elem_srv=self.elem_srv,
             db=self.db,
@@ -156,6 +162,7 @@ class NudgeContext:
     @cached_property
     def unsubscribe(self):
         return nudge.core.function.Unsubscribe(
+            ctx=self,
             db=self.db,
             sub_srv=self.sub_srv,
             log=self.log,
@@ -165,7 +172,12 @@ class NudgeContext:
 
     @cached_property
     def sqs(self):
-        return boto3.client('sqs')
+        # https://sqs.{region}.amazonaws.com/{account_id}/{name}
+        region = self.config['Worker']['Deferral']['Env']['QueueUrl'].split('.', 2)[1]
+        return boto3.client(
+            service_name='sqs',
+            region_name=region,
+        )
 
     @cached_property
     def sns(self):

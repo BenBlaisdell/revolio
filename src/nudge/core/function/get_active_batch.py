@@ -7,10 +7,11 @@ import nudge.core.function
 
 class GetActiveBatch(rv.Function):
 
-    def __init__(self, ctx, log, elem_srv):
+    def __init__(self, ctx, log, elem_srv, batch_srv):
         super().__init__(ctx)
         self._log = log
         self._elem_srv = elem_srv
+        self._batch_srv = batch_srv
 
     def format_request(self, sub_id, *, force=False):
         return {
@@ -44,4 +45,11 @@ class GetActiveBatch(rv.Function):
 
     def __call__(self, sub_id, *, force=False):
         self._log.info('Handling call: GetActiveBatch')
-        return self._elem_srv.get_active_batch_id(sub_id, state=Element.State.Unconsumed)
+        batch_id = self._elem_srv.get_active_batch_id(sub_id)
+        if batch_id is not None:
+            return batch_id
+
+        if force:
+            return self._batch_srv.create_batch()
+
+        return None

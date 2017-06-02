@@ -1,6 +1,6 @@
 import re
 
-from cached_property import cached_property
+from cached_property import threaded_cached_property
 import ruamel.yaml as ryaml
 
 
@@ -11,11 +11,11 @@ class ConfigService:
         self._s3 = s3
         self._config_s3_uri = config_s3_uri
 
-    @cached_property
+    @threaded_cached_property
     def _config(self):
         return ryaml.load(self._raw_config, ryaml.Loader)
 
-    @cached_property
+    @threaded_cached_property
     def _raw_config(self):
         while True:
             self._log.info('Fetching S3 config: {}'.format(self._config_s3_uri))

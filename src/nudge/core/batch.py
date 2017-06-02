@@ -6,12 +6,19 @@ from nudge.core.entity import Element, Subscription
 
 class BatchService:
 
-    def __init__(self, ctx, db, elem_srv):
+    def __init__(self, ctx, db, elem_srv, sub_srv):
         self._ctx = ctx
         self._db = db
         self._elem_srv = elem_srv
+        self._sub_srv = sub_srv
 
-    def create_batch(self, sub, elems):
+    def create_batch(self, sub_id):
+        sub = self._sub_srv.get_subscription(sub_id)
+        elems = self._elem_srv.get_sub_elems(sub, state=Element.State.Unconsumed)
+
+        if len(elems) == 0:
+            return None
+
         batch_id = str(uuid.uuid4())
         for elem in elems:
             assert elem.state == Element.State.Unconsumed

@@ -18,8 +18,10 @@ class App:
 
         functions = [
             ctx.subscribe,
+            ctx.backfill,
             ctx.handle_object_created,
             ctx.get_active_batch,
+            ctx.get_batch_elems,
             ctx.consume,
             ctx.unsubscribe,
         ]

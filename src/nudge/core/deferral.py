@@ -3,11 +3,11 @@ from flask import json
 
 class DeferralSrv:
 
-    def __init__(self, log, sqs, queue_url):
+    def __init__(self, log, sqs, def_queue_url):
         super().__init__()
         self._log = log
         self._sqs = sqs
-        self._queue_url = queue_url
+        self._queue_url = def_queue_url
 
     def send_call(self, func, *args, **kwargs):
         url = func.url

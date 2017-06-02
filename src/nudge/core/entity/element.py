@@ -92,13 +92,13 @@ class ElementService:
         assert len(elems) == len(elem_ids)
         return elems
 
-    def get_sub_elems(self, sub):
+    def get_sub_elems(self, sub, *, state=Element.State.Unconsumed):
         return [
             Element(orm)
             for orm in self._db
                 .query(ElementOrm)
                 .filter(ElementOrm.sub_id == sub.id)
-                .filter(ElementOrm.state == Element.State.Unconsumed.value)
+                .filter(ElementOrm.state == state.value)
                 .all()
         ]
 

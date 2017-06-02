@@ -1,17 +1,23 @@
 import enum
+import functools
 import inspect
 
-from werkzeug.utils import cached_property
+import cached_property
 
 
 class Scope(enum.Enum):
     Global = 'Global'
 
 
-class Inject(cached_property):
+class Inject(cached_property.threaded_cached_property):
 
     def __init__(self, callable):
-        super(Inject, self).__init__(lambda ctx: _init_injected(ctx, callable))
+
+        @functools.wraps(callable)
+        def wrapper(ctx):
+            return _init_injected(ctx, callable)
+
+        super(Inject, self).__init__(wrapper)
 
 
 def _init_injected(ctx, callable):

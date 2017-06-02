@@ -1,17 +1,16 @@
 import os
 
 import sqlalchemy
+from flask import json
 
-from nudge.orm import EntityOrm
+import nudge
+from nudge.core.context import NudgeContext
 
 
 if __name__ == '__main__':
-    engine = sqlalchemy.create_engine('postgresql://{u}:{p}@{e}:5432/{db}'.format(
-        e=os.environ['NUDGE_DB_ENDPOINT'],
-        db=os.environ['NUDGE_DB_NAME'],
-        u=os.environ['NUDGE_DB_USERNAME'],
-        p=os.environ['NUDGE_DB_PASSWORD'],
-    ))
+    ctx = nudge.core.context.NudgeContext(
+        json.loads(os.environ['S3_CONFIG_URI']),
+    )
 
-    EntityOrm.metadata.drop_all(engine)
-    EntityOrm.metadata.create_all(engine)
+    with ctx.app.flask_app.app_context():
+        ctx.db.recreate_tables()

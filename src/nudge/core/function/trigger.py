@@ -28,7 +28,7 @@ class Trigger(rv.Function):
 
         endpoint = Endpoint.deserialize(request['Endpoint'])
 
-        threshold = request.get('Threshold', None)
+        threshold = request['Threshold']
         assert isinstance(threshold, int)
 
         # make call

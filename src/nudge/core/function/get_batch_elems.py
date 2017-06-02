@@ -5,19 +5,19 @@ import revolio as rv
 from nudge.core.entity.subscription import Subscription
 
 
-class GetBatch(rv.Function):
+class GetBatchElements(rv.Function):
 
     def __init__(self, ctx, elem_srv, log):
         super().__init__(ctx)
         self._elem_srv = elem_srv
         self._log = log
 
-    def format_request(self, sub_id, *, offset=0, limit=None, state=None, gte_s3_path=None):
+    def format_request(self, sub_id, batch_id, *, offset=0, limit=None, gte_s3_path=None):
         return {
             'SubscriptionId': sub_id,
+            'BatchId': batch_id,
             'Offset': offset,
             'Limit': limit,
-            'State': state.value if (state is not None) else None,
             'GteS3Path': gte_s3_path,
         }
 
@@ -27,14 +27,14 @@ class GetBatch(rv.Function):
         subscription_id = request['SubscriptionId']
         assert isinstance(subscription_id, str)
 
+        batch_id = request['BatchId']
+        assert isinstance(batch_id, str)
+
         offset = request.get('Offset', 0)
         assert isinstance(offset, int)
 
         limit = request.get('Limit', None)
         assert isinstance(limit, int) or (limit is None)
-
-        state = request.get('State', None)
-        state = Subscription.State[state] if (state is not None) else None
 
         gte_s3_path = request.get('GteS3Path', None)
         assert isinstance(gte_s3_path, str) or (gte_s3_path is None)
@@ -45,6 +45,7 @@ class GetBatch(rv.Function):
         # format response
         return {
             'SubscriptionId': subscription_id,
+            'BatchId': batch_id,
             'Elements': [
                 {
                     'Id': elem.id,
@@ -58,12 +59,12 @@ class GetBatch(rv.Function):
             ],
         }
 
-    def __call__(self, sub_id, *, offset=0, limit=None, state=None, gte_s3_path=None):
+    def __call__(self, sub_id, batch_id, *, offset=0, limit=None, gte_s3_path=None):
         self._log.info('Handling call: GetBatch')
-        return self._elem_srv.get_sub_elems_by_id(
+        return self._elem_srv.get_batch_elems(
             sub_id=sub_id,
+            batch_id=batch_id,
             offset=offset,
             limit=limit,
-            state=state,
             gte_s3_path=gte_s3_path
         )

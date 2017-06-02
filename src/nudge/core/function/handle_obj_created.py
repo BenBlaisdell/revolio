@@ -75,9 +75,10 @@ class HandleObjectCreated(rv.Function):
         return elem, self._evaluate_sub(sub)
 
     def _evaluate_sub(self, sub):
-        elems = self._elem_srv.get_sub_elems(sub)
+        elems = self._elem_srv.get_sub_elems(sub, state=Element.State.Unconsumed)
         if _batch_size(elems) >= sub.threshold:
-            self._batch_srv.send_batch(sub, elems)
+            batch_id = self._batch_srv.create_batch(sub, elems)
+            self._batch_srv.send_batch(sub, batch_id)
             return True
 
         return False

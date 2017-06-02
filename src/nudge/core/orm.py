@@ -29,3 +29,4 @@ class ElementOrm(EntityOrm):
     id = sa.Column(sa.String, primary_key=True)
     state = sa.Column(sa.String)
     sub_id = sa.Column(sa.String)
+    batch_id = sa.Column(sa.String)

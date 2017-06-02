@@ -15,7 +15,7 @@ class Element(rv.Entity):
 
     class State(enum.Enum):
         Unconsumed = 'Unconsumed'
-        Sent = 'Sent'
+        Batched = 'Batched'
         Consumed = 'Consumed'
 
     @property
@@ -26,6 +26,14 @@ class Element(rv.Entity):
     def state(self, state):
         assert isinstance(state, Element.State)
         self._orm.state = state.value
+
+    @property
+    def batch_id(self):
+        return self._orm.batch_id
+
+    @batch_id.setter
+    def batch_id(self, batch_id):
+        self._orm.batch_id = batch_id
 
     @property
     def sub_id(self):
@@ -52,11 +60,12 @@ class Element(rv.Entity):
         return dt.datetime.strptime(self._orm.updated, '%Y-%m-%d %H:%M:%S')
 
     @staticmethod
-    def create(sub_id, bucket, key, size, created):
+    def create(sub_id, bucket, key, size, created, *, batch_id=None):
         return Element(ElementOrm(
             id=str(uuid.uuid4()),
             state=Element.State.Unconsumed.value,
             sub_id=sub_id,
+            batch_id=batch_id,
             data=dict(
                 bucket=bucket,
                 key=key,
@@ -93,7 +102,7 @@ class ElementService:
                 .all()
         ]
 
-    def get_sub_elems_by_id(self, sub_id, offset=0, limit=None, state=Element.State.Unconsumed, gte_s3_key=None):
+    def get_sub_elems_by_id(self, sub_id, *, offset=0, limit=None, state=Element.State.Unconsumed, gte_s3_key=None):
         query = self._db \
             .query(ElementOrm) \
             .filter(ElementOrm.sub_id == sub_id) \
@@ -108,3 +117,29 @@ class ElementService:
             Element(orm)
             for orm in query.all()
         ]
+
+    def get_batch_elems(self, sub_id, batch_id, *, offset=0, limit=None, gte_s3_key=None):
+        query = self._db \
+            .query(ElementOrm) \
+            .filter(ElementOrm.sub_id == sub_id) \
+            .filter(ElementOrm.state == Element.State.Batched.value) \
+            .filter(ElementOrm.batch_id == batch_id) \
+            .limit(limit) \
+            .offset(offset)
+
+        if gte_s3_key is not None:
+            query = query.filter(ElementOrm.key >= gte_s3_key)
+
+        return [
+            Element(orm)
+            for orm in query.all()
+        ]
+
+    def get_active_batch_id(self, sub_id):
+        return self._db \
+            .query(ElementOrm.batch_id) \
+            .filter(ElementOrm.sub_id == sub_id) \
+            .filter(ElementOrm.state == Element.State.Batched.value) \
+            .group_by(ElementOrm.batch_id) \
+            .order_by(ElementOrm.created) \
+            .first()

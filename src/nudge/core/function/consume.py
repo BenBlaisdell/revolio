@@ -42,5 +42,5 @@ class Consume(rv.Function):
         self._db.commit()
 
     def _check_state(self, elem):
-        if elem.state != Element.State.Sent:
+        if elem.state != Element.State.Batched:
             self._log.warning('Consuming element {} in state {}'.format(elem.id, elem.state))

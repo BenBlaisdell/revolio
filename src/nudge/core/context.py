@@ -87,6 +87,7 @@ class NudgeContext:
         return nudge.core.batch.BatchService(
             ctx=self,
             db=self.db,
+            elem_srv=self.elem_srv,
         )
 
     @cached_property
@@ -143,8 +144,27 @@ class NudgeContext:
         )
 
     @cached_property
-    def get_batch(self):
-        return nudge.core.function.get_batch.GetBatch(
+    def create_batch(self):
+        return nudge.core.function.create_batch.CreateBatch(
+            ctx=self,
+            db=self.db,
+            log=self.log,
+            sub_srv=self.sub_srv,
+            elem_srv=self.elem_srv,
+            batch_srv=self.batch_srv,
+        )
+
+    @cached_property
+    def get_active_batch(self):
+        return nudge.core.function.get_active_batch.GetActiveBatch(
+            ctx=self,
+            log=self.log,
+            elem_srv=self.elem_srv,
+        )
+
+    @cached_property
+    def get_batch_elems(self):
+        return nudge.core.function.get_batch_elems.GetBatchElements(
             ctx=self,
             elem_srv=self.elem_srv,
             log=self.log,

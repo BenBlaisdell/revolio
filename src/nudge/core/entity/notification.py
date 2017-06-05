@@ -4,7 +4,11 @@ import revolio as rv
 import sqlalchemy as sa
 import sqlalchemy.orm.exc
 
-from nudge.core.orm import NotificationOrm
+from nudge.core.entity import EntityOrm
+
+
+# intended to track s3 object creation notifications
+# not currently in use
 
 
 class Notification(rv.Entity):
@@ -28,6 +32,20 @@ class Notification(rv.Entity):
             prefix=prefix,
             config_id='nudge-notification-{}'.format(str(uuid.uuid4())),
         ))
+
+
+# orm
+
+
+class NotificationOrm(EntityOrm):
+    __tablename__ = 'notification'
+
+    bucket = sa.Column(sa.String, primary_key=True)
+    prefix = sa.Column(sa.String, primary_key=True)
+    config_id = sa.Column(sa.String)
+
+
+# service
 
 
 class NotificationService:

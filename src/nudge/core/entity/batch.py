@@ -1,11 +1,10 @@
 import enum
-import json
 import uuid
 
 import revolio as rv
-from nudge.core.entity import Element
+import sqlalchemy as sa
 
-from nudge.core.orm import BatchOrm
+from nudge.core.entity import EntityOrm
 
 
 class Batch(rv.Entity):
@@ -46,6 +45,20 @@ class Batch(rv.Entity):
             sub_id=self.sub_id,
             state=self.state,
         )
+
+
+# orm
+
+
+class BatchOrm(EntityOrm):
+    __tablename__ = 'batch'
+
+    id = sa.Column(sa.String, primary_key=True)
+    state = sa.Column(sa.String)
+    sub_id = sa.Column(sa.String)
+
+
+# service
 
 
 class BatchService:

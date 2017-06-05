@@ -1,8 +1,6 @@
 import revolio as rv
 
-from nudge.core.endpoint import Endpoint
 from nudge.core.entity import Subscription
-import nudge.core.function
 
 
 class Subscribe(rv.Function):
@@ -13,15 +11,13 @@ class Subscribe(rv.Function):
         self._log = log
         self._deferral = deferral
 
-    def format_request(self, bucket, endpoint, *, prefix=None, regex=None, threshold=0, custom=None, backfill=False):
+    def format_request(self, bucket, *, prefix=None, regex=None, backfill=False, trigger=None):
         return {
             'Bucket': bucket,
-            'Endpoint': endpoint,
             'Prefix': prefix,
             'Regex': regex,
-            'Threshold': threshold,
-            'Custom': custom,
             'Backfill': backfill,
+            'Trigger': trigger,
         }
 
     def handle_request(self, request):
@@ -35,29 +31,24 @@ class Subscribe(rv.Function):
         prefix = request.get('Prefix', None)
         assert isinstance(prefix, str) or (prefix is None)
 
-        endpoint = Endpoint.deserialize(request['Endpoint'])
-
         regex = request.get('Regex', None)
         assert isinstance(regex, str) or (regex is None)
 
-        threshold = request.get('Threshold', None)
-        assert isinstance(threshold, int) or (threshold is None)
-
-        custom = request.get('Custom', None)
-        assert isinstance(custom, dict) or (custom is None)
-
         backfill = request.get('Backfill', False)
         assert isinstance(backfill, bool)
+
+        trigger = request.get('Trigger', None)
+        if trigger is not None:
+            trigger = Subscription.Trigger.deserialize(trigger)
+            assert isinstance(trigger, Subscription.Trigger)
 
         # make call
 
         sub = self(
             bucket=bucket,
             prefix=prefix,
-            endpoint=endpoint,
             regex=regex,
-            threshold=threshold,
-            custom=custom,
+            trigger=trigger,
             backfill=backfill,
         )
 
@@ -67,16 +58,14 @@ class Subscribe(rv.Function):
             'SubscriptionId': sub.id,
         }
 
-    def __call__(self, bucket, endpoint=None, *, prefix=None, regex=None, threshold=0, custom=None, backfill=False):
+    def __call__(self, bucket, *, prefix=None, regex=None, backfill=False, trigger=None):
         self._log.info('Handling call: Subscribe')
 
         sub = Subscription.create(
             bucket=bucket,
-            endpoint=endpoint,
             prefix=prefix,
             regex=regex,
-            threshold=threshold,
-            custom=custom,
+            trigger=trigger,
         )
 
         self._db.add(sub)

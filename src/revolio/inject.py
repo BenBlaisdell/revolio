@@ -4,6 +4,10 @@ import inspect
 
 import cached_property
 
+import werkzeug.utils
+
+werkzeug.utils.cached_property
+
 
 class Scope(enum.Enum):
     Global = 'Global'

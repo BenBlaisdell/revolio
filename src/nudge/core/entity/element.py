@@ -3,8 +3,9 @@ import enum
 import uuid
 
 import revolio as rv
+import sqlalchemy as sa
 
-from nudge.core.orm import ElementOrm
+from nudge.core.entity import EntityOrm
 
 
 class Element(rv.Entity):
@@ -76,6 +77,21 @@ class Element(rv.Entity):
             sub_id=self.sub_id,
             state=self.state,
         )
+
+
+# orm
+
+
+class ElementOrm(EntityOrm):
+    __tablename__ = 'element'
+
+    id = sa.Column(sa.String, primary_key=True)
+    state = sa.Column(sa.String)
+    sub_id = sa.Column(sa.String)
+    batch_id = sa.Column(sa.String)
+
+
+# service
 
 
 class ElementService:

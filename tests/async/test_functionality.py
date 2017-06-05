@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from nudge.core.context import NudgeContext
-from nudge.core.endpoint import SqsEndpoint
+from nudge.core.entity.subscription import SqsEndpoint
 from nudge.core.entity import Batch, Subscription
 from nudge.core.entity.element import Element
 
@@ -40,9 +40,11 @@ def test_functionality(nudge):
         bucket=b,
         prefix=p,
         regex=None,
-        threshold=50,
-        endpoint=SqsEndpoint(
-            queue_url=ENDPOINT_QUEUE_URL,
+        trigger=Subscription.Trigger(
+            threshold=50,
+            endpoint=SqsEndpoint(
+                queue_url=ENDPOINT_QUEUE_URL,
+            ),
         ),
     )
 

@@ -84,7 +84,7 @@ class HandleObjectCreated(rv.Function):
 
     def _evaluate_sub(self, sub):
         elems = self._elem_srv.get_sub_elems(sub.id, state=Element.State.Unconsumed)
-        if _batch_size(elems) >= sub.threshold:
+        if _batch_size(elems) >= sub.trigger.threshold:
             return self._create_and_send_batch(sub, elems)
 
         return None
@@ -100,15 +100,15 @@ class HandleObjectCreated(rv.Function):
 
         self._db.flush()
 
-        if sub.custom:
-            msg = json.dumps(sub.custom)
+        if sub.trigger.custom is not None:
+            msg = json.dumps(sub.trigger.custom)
         else:
             msg = json.dumps({
                 'SubscriptionId': sub.id,
                 'BatchId': batch.id,
             })
 
-        sub.endpoint.send_message(ctx=self._ctx, msg=msg)
+        sub.trigger.endpoint.send_message(ctx=self._ctx, msg=msg)
 
         return batch
 

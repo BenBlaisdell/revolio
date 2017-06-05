@@ -11,6 +11,7 @@ import nudge.core.entity
 import nudge.core.function
 import nudge.core.log
 
+
 class NudgeContext:
 
     def __init__(self, config_s3_uri, *, flask_config=None):
@@ -51,7 +52,6 @@ class NudgeContext:
     sub_srv = rv.Inject(nudge.core.entity.SubscriptionService)
     elem_srv = rv.Inject(nudge.core.entity.ElementService)
     batch_srv = rv.Inject(nudge.core.entity.BatchService)
-    nfn_srv = rv.Inject(nudge.core.entity.NotificationService)
 
     log = rv.Inject(nudge.core.log.LogService)
     deferral = rv.Inject(nudge.core.deferral.DeferralSrv)

@@ -1,13 +1,107 @@
+import abc
 import enum
 import re
 import uuid
 
-import marshmallow as mm
 import revolio as rv
 import sqlalchemy as sa
 
-from nudge.core.endpoint import Endpoint
-from nudge.core.orm import SubscriptionOrm
+from nudge.core.entity import EntityOrm
+
+
+class SubscriptionEndpointProtocol(enum.Enum):
+    SQS = 'SQS'
+
+
+class SubscriptionEndpoint(rv.Serializable):
+
+    Protocol = SubscriptionEndpointProtocol
+
+    @staticmethod
+    def deserialize(data):
+        if data is None:
+            return None
+
+        protocol = SubscriptionEndpoint.Protocol[data['Protocol']]
+        params = data['Parameters']
+
+        if protocol == SubscriptionEndpoint.Protocol.SQS:
+            return SqsEndpoint.deserialize(params)
+
+    @abc.abstractmethod
+    def send_message(self, ctx, msg):
+        pass
+
+
+class SqsEndpoint(SubscriptionEndpoint):
+
+    def __init__(self, queue_url):
+        super(SqsEndpoint, self).__init__()
+        self._queue_url = queue_url
+
+    def serialize(self):
+        return {
+            'Protocol': 'SQS',
+            'Parameters': {
+                'QueueUrl': self._queue_url,
+            },
+        }
+
+    @staticmethod
+    def deserialize(data):
+        return None if (data is None) else SqsEndpoint(
+            queue_url=data['QueueUrl'],
+        )
+
+    def send_message(self, ctx, msg):
+        ctx.sqs.send_message(
+            QueueUrl=self._queue_url,
+            MessageBody=msg,
+        )
+
+
+# 0 byte threshold
+# every file creates a new batch
+DEFAULT_THRESHOLD = 0
+
+
+class SubscriptionTrigger(rv.Serializable):
+    """Describes the conditions under which a batch is created and the endpoint that is notified."""
+
+    Endpoint = SubscriptionEndpoint
+
+    @property
+    def endpoint(self):
+        return self._endpoint
+
+    @property
+    def threshold(self):
+        return self._threshold
+
+    @property
+    def custom(self):
+        return self._custom
+
+    def __init__(self, endpoint, *, threshold=DEFAULT_THRESHOLD, custom=None):
+        super().__init__()
+        self._endpoint = endpoint
+        self._threshold = threshold
+        self._custom = custom
+
+    def serialize(self):
+        return {
+            'Endpoint': self._endpoint.serialize(),
+            'Threshold': self._threshold,
+            'Custom': self._custom,
+        }
+
+    @staticmethod
+    def deserialize(data):
+        return None if (data is None) else SubscriptionTrigger(
+            endpoint=SubscriptionTrigger.Endpoint.deserialize(data.get('Endpoint', None)),
+            threshold=data.get('Threshold', DEFAULT_THRESHOLD),
+            custom=data.get('Custom', None),
+        )
 
 
 class Subscription(rv.Entity):
@@ -43,20 +137,19 @@ class Subscription(rv.Entity):
         r = self._orm.data.get('regex', None)
         return re.compile(r'\A{}\Z'.format(r)) if (r is not None) else None
 
-    @property
-    def threshold(self):
-        return int(self._orm.data['threshold'])
+    Trigger = SubscriptionTrigger
 
     @property
-    def endpoint(self):
-        return Endpoint.deserialize(self._orm.data['endpoint'])
+    def trigger(self):
+        return Subscription.Trigger.deserialize(self._orm.data['trigger'])
 
-    @property
-    def custom(self):
-        return self._orm.data.get('custom', None)
+    @trigger.setter
+    def trigger(self, trigger):
+        assert isinstance(trigger, Subscription.Trigger)
+        self._orm.data['trigger'] = trigger.serialize()
 
     @staticmethod
-    def create(bucket, endpoint, *, prefix=None, regex=None, threshold=0, custom=None):
+    def create(bucket, *, prefix=None, regex=None, trigger=None):
         return Subscription(SubscriptionOrm(
             id=str(uuid.uuid4()),
             state=Subscription.State.Active.value,
@@ -64,9 +157,7 @@ class Subscription(rv.Entity):
             prefix=prefix,
             data=dict(
                 regex=regex,
-                threshold=threshold,
-                endpoint=endpoint.serialize(),
-                custom=custom,
+                trigger=trigger.serialize() if (trigger is not None) else None,
             )
         ))
 
@@ -84,60 +175,19 @@ class Subscription(rv.Entity):
         )
 
 
-# schema
+# orm
 
 
-class SubscriptionEndpointSchema(mm.Schema):
-    Protocol = mm.fields.Str()
-    Params = mm.fields.Dict()
+class SubscriptionOrm(EntityOrm):
+    __tablename__ = 'subscription'
+
+    id = sa.Column(sa.String, primary_key=True)
+    state = sa.Column(sa.String)
+    bucket = sa.Column(sa.String)
+    prefix = sa.Column(sa.String)
 
 
-class SubscriptionSchema(mm.Schema):
-    id = mm.fields.UUID(
-        required=True,
-    )
-
-    state = mm.fields.Str(
-        required=True,
-    )
-
-    bucket = mm.fields.Str(
-        required=True,
-    )
-
-    prefix = mm.fields.Str(
-        default=None,
-    )
-
-    regex = mm.fields.Str(
-        default=None,
-        help=' '.join([
-            'The regular expression against which',
-            'the remainder of the key is matched.',
-            'Syntax follows that of the python re package.',
-        ]),
-    )
-
-    threshold = mm.fields.Int(
-        default=0,
-        help='The byte threshold at which a subscription batch is created',
-    )
-
-    endpoint = mm.fields.Nested(
-        SubscriptionEndpointSchema(),
-    )
-
-    metadata = mm.fields.Dict(
-        default=None,
-        help=' '.join(['The custom json response agreed upon'
-                       'on creation of subscription entity. This'
-                       'custom response replaces the default nudge'
-                       'message on the target endpoint/queue.'])
-    )
-
-    @mm.post_load
-    def return_subscription_entity(self, data):
-        return Subscription.create(**data)
+# service
 
 
 class SubscriptionService:

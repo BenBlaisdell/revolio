@@ -58,12 +58,14 @@ class NudgeContext:
 
     # functions
 
-    subscribe = rv.Inject(nudge.core.function.Subscribe)
+    attach_trigger = rv.Inject(nudge.core.function.AttachTrigger)
     backfill = rv.Inject(nudge.core.function.Backfill)
-    handle_object_created = rv.Inject(nudge.core.function.HandleObjectCreated)
+    consume = rv.Inject(nudge.core.function.Consume)
     get_active_batch = rv.Inject(nudge.core.function.GetActiveBatch)
     get_batch_elems = rv.Inject(nudge.core.function.GetBatchElements)
-    consume = rv.Inject(nudge.core.function.Consume)
+    get_sub_batches = rv.Inject(nudge.core.function.GetSubscriptionBatches)
+    handle_object_created = rv.Inject(nudge.core.function.HandleObjectCreated)
+    subscribe = rv.Inject(nudge.core.function.Subscribe)
     unsubscribe = rv.Inject(nudge.core.function.Unsubscribe)
 
     # aws

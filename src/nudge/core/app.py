@@ -17,12 +17,14 @@ class App:
         self._app.config.update(**flask_config)
 
         functions = [
-            ctx.subscribe,
+            ctx.attach_trigger,
             ctx.backfill,
-            ctx.handle_object_created,
+            ctx.consume,
             ctx.get_active_batch,
             ctx.get_batch_elems,
-            ctx.consume,
+            ctx.get_sub_batches,
+            ctx.handle_object_created,
+            ctx.subscribe,
             ctx.unsubscribe,
         ]
 

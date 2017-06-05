@@ -55,10 +55,6 @@ class Element(rv.Entity):
     def s3_created(self):
         return dt.datetime.strptime(self._orm.data['created'], '%Y-%m-%d %H:%M:%S')
 
-    @property
-    def updated(self):
-        return dt.datetime.strptime(self._orm.updated, '%Y-%m-%d %H:%M:%S')
-
     @staticmethod
     def create(sub_id, bucket, key, size, created, *, batch_id=None):
         return Element(ElementOrm(
@@ -74,11 +70,19 @@ class Element(rv.Entity):
             )
         ))
 
+    def __str__(self):
+        return super().__str__(
+            id=self.id,
+            sub_id=self.sub_id,
+            state=self.state,
+        )
+
 
 class ElementService:
 
-    def __init__(self, db):
+    def __init__(self, db, log):
         self._db = db
+        self._log = log
 
     def get_elements(self, elem_ids):
         elems = [
@@ -90,56 +94,34 @@ class ElementService:
         ]
 
         assert len(elems) == len(elem_ids)
+        self._log.debug('Found elements by id: {}'.format(elems))
         return elems
 
-    def get_sub_elems(self, sub, *, state=Element.State.Unconsumed):
-        return [
+    def get_sub_elems(self, sub_id, *, state=Element.State.Unconsumed):
+        elems = [
             Element(orm)
             for orm in self._db
                 .query(ElementOrm)
-                .filter(ElementOrm.sub_id == sub.id)
+                .filter(ElementOrm.sub_id == sub_id)
                 .filter(ElementOrm.state == state.value)
                 .all()
         ]
 
-    def get_sub_elems_by_id(self, sub_id, *, offset=0, limit=None, state=Element.State.Unconsumed, gte_s3_key=None):
-        query = self._db \
-            .query(ElementOrm) \
-            .filter(ElementOrm.sub_id == sub_id) \
-            .filter(ElementOrm.state == state.value) \
-            .limit(limit) \
-            .offset(offset)
+        self._log.debug('Found elements for subscription {}: {}'.format(sub_id, elems))
+        return elems
 
-        if gte_s3_key is not None:
-            query = query.filter(ElementOrm.key >= gte_s3_key)
-
-        return [
+    def get_batch_elems(self, batch, *, offset=0, limit=None):
+        elems = [
             Element(orm)
-            for orm in query.all()
+            for orm in self._db
+                .query(ElementOrm)
+                .filter(ElementOrm.sub_id == batch.sub_id)
+                .filter(ElementOrm.state == Element.State.Batched.value)
+                .filter(ElementOrm.batch_id == batch.id)
+                .limit(limit)
+                .offset(offset)
+                .all()
         ]
 
-    def get_batch_elems(self, sub_id, batch_id, *, offset=0, limit=None, gte_s3_key=None):
-        query = self._db \
-            .query(ElementOrm) \
-            .filter(ElementOrm.sub_id == sub_id) \
-            .filter(ElementOrm.state == Element.State.Batched.value) \
-            .filter(ElementOrm.batch_id == batch_id) \
-            .limit(limit) \
-            .offset(offset)
-
-        if gte_s3_key is not None:
-            query = query.filter(ElementOrm.key >= gte_s3_key)
-
-        return [
-            Element(orm)
-            for orm in query.all()
-        ]
-
-    def get_active_batch_id(self, sub_id):
-        return self._db \
-            .query(ElementOrm.batch_id) \
-            .filter(ElementOrm.sub_id == sub_id) \
-            .filter(ElementOrm.state == Element.State.Batched.value) \
-            .group_by(ElementOrm.batch_id) \
-            .order_by(ElementOrm.created) \
-            .first()
+        self._log.debug('Found elements for {}: {}'.format(batch, elems))
+        return elems

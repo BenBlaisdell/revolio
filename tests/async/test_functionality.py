@@ -1,17 +1,21 @@
+import datetime as dt
+import json
 import os
 from pathlib import Path
 
 import pytest
 
-from nudge.context import NudgeContext
-from nudge.entity.element import Element
+from nudge.core.context import NudgeContext
+from nudge.core.endpoint import SqsEndpoint
+from nudge.core.entity import Batch, Subscription
+from nudge.core.entity.element import Element
 
 
-S3_CONFIG_URI = os.environ['S3_CONFIG_URI']
-ENDPOINT_QUEUE_URL = os.environ['ENDPOINT_QUEUE_URL']
+S3_CONFIG_URI = json.loads(os.environ['S3_CONFIG_URI'])
+ENDPOINT_QUEUE_URL = json.loads(os.environ['ENDPOINT_QUEUE_URL'])
 
 
-@pytest.fixture()
+@pytest.fixture(scope='function')
 def nudge():
     nudge = NudgeContext(
         S3_CONFIG_URI,
@@ -24,45 +28,45 @@ def nudge():
     with nudge.app.flask_app.app_context():
         nudge.db.recreate_tables()
         yield nudge
-        nudge.db.drop_tables()
+        # todo: why does this call prevent tests from finishing
+        # nudge.db.drop_tables()
 
 
 def test_functionality(nudge):
     b = 'dummy-bucket'
     p = 'a/b/c'
 
-    nudge.subscribe(
+    sub = nudge.subscribe(
         bucket=b,
         prefix=p,
         regex=None,
         threshold=50,
-        endpoint=dict(
-            Protocol='SQS',
-            Parameters=dict(
-                QueueUrl=ENDPOINT_QUEUE_URL,
-            ),
+        endpoint=SqsEndpoint(
+            queue_url=ENDPOINT_QUEUE_URL,
         ),
     )
 
-    ((elem1, triggered1),) = nudge.handle_obj_created(
+    assert isinstance(sub, Subscription)
+
+    ((elem1, batch1),) = nudge.handle_object_created(
         bucket=b,
         key=str(Path(p) / 'dummy-file-1.txt'),
         size=25,
-        created='2017-05-15 01:00:00',
+        created=dt.datetime.strptime('2017-05-15 01:00:00', '%Y-%m-%d %H:%M:%S'),
     )
 
     assert elem1.state == Element.State.Unconsumed
-    assert not triggered1
+    assert batch1 is None
 
-    ((elem2, triggered2),) = nudge.handle_obj_created(
+    ((elem2, batch2),) = nudge.handle_object_created(
         bucket=b,
         key=str(Path(p) / 'dummy-file-2.txt'),
         size=25,
-        created='2017-05-15 02:00:00',
+        created=dt.datetime.strptime('2017-05-15 02:00:00', '%Y-%m-%d %H:%M:%S'),
     )
 
-    assert elem2.state == elem1.state == Element.State.Sent
-    assert triggered2
+    assert elem2.state == elem1.state == Element.State.Batched
+    assert isinstance(batch2, Batch)
 
-    nudge.consume([elem1.id, elem2.id])
+    nudge.consume(sub.id, batch2.id)
     assert elem2.state == elem1.state == Element.State.Consumed

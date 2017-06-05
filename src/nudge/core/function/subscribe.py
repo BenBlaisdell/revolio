@@ -57,7 +57,8 @@ class Subscribe(rv.Function):
             endpoint=endpoint,
             regex=regex,
             threshold=threshold,
-            custom=custom
+            custom=custom,
+            backfill=backfill,
         )
 
         # format response

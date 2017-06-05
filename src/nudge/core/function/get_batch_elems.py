@@ -7,10 +7,11 @@ from nudge.core.entity.subscription import Subscription
 
 class GetBatchElements(rv.Function):
 
-    def __init__(self, ctx, elem_srv, log):
+    def __init__(self, ctx, elem_srv, log, db):
         super().__init__(ctx)
         self._elem_srv = elem_srv
         self._log = log
+        self._db = db
 
     def format_request(self, sub_id, batch_id, *, offset=0, limit=None, gte_s3_path=None):
         return {
@@ -40,7 +41,12 @@ class GetBatchElements(rv.Function):
         assert isinstance(gte_s3_path, str) or (gte_s3_path is None)
 
         # make call
-        elems = self(subscription_id=subscription_id, offset=offset, limit=limit, state=state, gte_s3_path=gte_s3_path)
+        elems = self(
+            subscription_id=subscription_id,
+            batch_id=batch_id,
+            offset=offset,
+            limit=limit,
+        )
 
         # format response
         return {
@@ -59,12 +65,14 @@ class GetBatchElements(rv.Function):
             ],
         }
 
-    def __call__(self, sub_id, batch_id, *, offset=0, limit=None, gte_s3_path=None):
+    def __call__(self, sub_id, batch_id, *, offset=0, limit=None):
         self._log.info('Handling call: GetBatch')
-        return self._elem_srv.get_batch_elems(
+        elems = self._elem_srv.get_batch_elems(
             sub_id=sub_id,
             batch_id=batch_id,
             offset=offset,
             limit=limit,
-            gte_s3_path=gte_s3_path
         )
+
+        self._db.commit()
+        return elems

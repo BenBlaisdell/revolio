@@ -39,7 +39,9 @@ class App:
 
         @self._app.errorhandler(500)
         def log_exception(exception):
-            self._log.warning(traceback.format_exc())
+            tb = traceback.format_exc()
+            self._log.warning(tb)
+            return tb, 500
 
         db.init_app(self._app)
         self._db = db
@@ -71,9 +73,19 @@ class App:
         self._app.add_url_rule(
             endpoint,
             f.name,
-            lambda: json.dumps(f.handle_request(flask.request.get_json(force=True))),
+            lambda: self._handle_request(f),
             methods=['POST'],
         )
+
+    def _handle_request(self, f):
+        request = flask.request.get_json(force=True)
+        result = f.handle_request(request)
+
+        # commit for safety
+        # todo: auto-commit all functions
+        self._db.commit()
+
+        return json.dumps(result)
 
 
 if __name__ == '__main__':

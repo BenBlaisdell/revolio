@@ -1,8 +1,9 @@
 import datetime as dt
+import json
 
 import revolio as rv
 
-from nudge.core.entity import Element
+from nudge.core.entity import Element, Batch
 
 
 class HandleObjectCreated(rv.Function):
@@ -47,9 +48,10 @@ class HandleObjectCreated(rv.Function):
             'MatchingSubscriptions': {
                 elem.sub_id: {
                     'ElementId': elem.id,
-                    'Triggered': triggered,
+                    'Triggered': (batch is not None),
+                    'BatchId': batch,
                 }
-                for elem, triggered in self(
+                for elem, batch in self(
                     bucket=bucket,
                     key=key,
                     size=size,
@@ -70,18 +72,45 @@ class HandleObjectCreated(rv.Function):
         return result
 
     def _handle_matching_sub(self, sub, bucket, key, size, created):
-        elem = Element.create(sub_id=sub.id, bucket=bucket, key=key, size=size, created=created)
-        self._db.add(elem)
+        elem = self._db.add(Element.create(
+            sub_id=sub.id,
+            bucket=bucket,
+            key=key,
+            size=size,
+            created=created,
+        ))
+
         return elem, self._evaluate_sub(sub)
 
     def _evaluate_sub(self, sub):
-        elems = self._elem_srv.get_sub_elems(sub, state=Element.State.Unconsumed)
+        elems = self._elem_srv.get_sub_elems(sub.id, state=Element.State.Unconsumed)
         if _batch_size(elems) >= sub.threshold:
-            batch_id = self._batch_srv.create_batch(sub, elems)
-            self._batch_srv.send_batch(sub, batch_id)
-            return True
+            return self._create_and_send_batch(sub, elems)
 
-        return False
+        return None
+
+    def _create_and_send_batch(self, sub, elems):
+        batch = self._db.add(Batch.create(sub.id))
+
+        for elem in elems:
+            assert elem.sub_id == sub.id
+            assert elem.state == Element.State.Unconsumed
+            elem.state = Element.State.Batched
+            elem.batch_id = batch.id
+
+        self._db.flush()
+
+        if sub.custom:
+            msg = json.dumps(sub.custom)
+        else:
+            msg = json.dumps({
+                'SubscriptionId': sub.id,
+                'BatchId': batch.id,
+            })
+
+        sub.endpoint.send_message(ctx=self._ctx, msg=msg)
+
+        return batch
 
 
 def _batch_size(elems):

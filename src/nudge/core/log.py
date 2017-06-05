@@ -13,7 +13,7 @@ class LogService:
         ch.setLevel(logging.DEBUG)
 
         # formatter
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         ch.setFormatter(formatter)
 
         # attach handlers

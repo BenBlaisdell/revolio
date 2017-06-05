@@ -4,7 +4,6 @@ import revolio as rv
 from cached_property import threaded_cached_property
 
 import nudge.core.app
-import nudge.core.batch
 import nudge.core.config
 import nudge.core.db
 import nudge.core.deferral
@@ -51,9 +50,9 @@ class NudgeContext:
 
     sub_srv = rv.Inject(nudge.core.entity.SubscriptionService)
     elem_srv = rv.Inject(nudge.core.entity.ElementService)
+    batch_srv = rv.Inject(nudge.core.entity.BatchService)
     nfn_srv = rv.Inject(nudge.core.entity.NotificationService)
 
-    batch_srv = rv.Inject(nudge.core.batch.BatchService)
     log = rv.Inject(nudge.core.log.LogService)
     deferral = rv.Inject(nudge.core.deferral.DeferralSrv)
 

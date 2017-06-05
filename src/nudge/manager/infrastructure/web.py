@@ -231,6 +231,15 @@ class WebResources(ResourceGroup):
                     ),
                 ) for name, statement in [
                     (
+                        # send trigger messages
+                        'access-all-sqs',
+                        awacs.aws.Statement(
+                            Effect='Allow',
+                            Action=[awacs.sqs.Action('*')],
+                            Resource=['*'],
+                        ),
+                    ), (
+                        # send deferred api calls
                         'access-deferral-queue',
                         awacs.aws.Statement(
                             Effect='Allow',
@@ -238,6 +247,7 @@ class WebResources(ResourceGroup):
                             Resource=[ts.GetAtt(self.env.worker.def_worker.queue, 'Arn')],
                         ),
                     ), (
+                        # backfill data
                         'read-all-s3',
                         awacs.aws.Statement(
                             Effect='Allow',

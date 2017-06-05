@@ -1,19 +1,21 @@
 import revolio as rv
 
-from nudge.core.entity import Element
+from nudge.core.entity import Element, Batch
 
 
 class Consume(rv.Function):
 
-    def __init__(self, ctx, log, elem_srv, db):
+    def __init__(self, ctx, log, db, batch_srv, elem_srv):
         super().__init__(ctx)
         self._log = log
-        self._elem_srv = elem_srv
         self._db = db
+        self._batch_srv = batch_srv
+        self._elem_srv = elem_srv
 
-    def format_request(self, elem_ids):
+    def format_request(self, sub_id, batch_id):
         return {
-            'ElementIds': elem_ids,
+            'SubscriptionId': sub_id,
+            'BatchId': batch_id,
         }
 
     def handle_request(self, request):
@@ -21,26 +23,31 @@ class Consume(rv.Function):
 
         # parse parameters
 
-        element_ids = request['ElementIds']
-        assert isinstance(element_ids, list)
+        sub_id = request['SubscriptionId']
+        assert isinstance(sub_id, str)
+
+        batch_id = request['BatchId']
+        assert isinstance(batch_id, str)
 
         # make call
 
-        self(element_ids)
+        self(
+            sub_id=sub_id,
+            batch_id=batch_id,
+        )
 
         # format response
 
         return {'Message': 'Success'}
 
-    def __call__(self, elem_ids):
+    def __call__(self, sub_id, batch_id):
         self._log.info('Handling call: Consume')
 
-        for elem in self._elem_srv.get_elements(elem_ids):
-            self._check_state(elem)
+        batch = self._batch_srv.get_batch(batch_id)
+        assert batch.sub_id == sub_id
+        batch.state = Batch.State.Consumed
+
+        for elem in self._elem_srv.get_batch_elems(batch):
             elem.state = Element.State.Consumed
 
         self._db.commit()
-
-    def _check_state(self, elem):
-        if elem.state != Element.State.Batched:
-            self._log.warning('Consuming element {} in state {}'.format(elem.id, elem.state))

@@ -77,6 +77,12 @@ class Subscription(rv.Entity):
             (self.regex is None) or self.regex.match(key[len(self.prefix):]),
         ])
 
+    def __str__(self):
+        return super().__str__(
+            id=self.id,
+            state=self.state,
+        )
+
 
 # schema
 
@@ -136,9 +142,10 @@ class SubscriptionSchema(mm.Schema):
 
 class SubscriptionService:
 
-    def __init__(self, db):
+    def __init__(self, db, log):
         super(SubscriptionService, self).__init__()
         self._db = db
+        self._log = log
 
     def get_subscription(self, sub_id):
         orm = self._db \
@@ -148,7 +155,9 @@ class SubscriptionService:
         if orm is None:
             raise Exception('No subscription with id {}'.format(sub_id))
 
-        return Subscription(orm)
+        sub = Subscription(orm)
+        self._log.debug('Found {} by id'.format(sub))
+        return sub
 
     def find_matching_subscriptions(self, bucket, key):
         subs = [
@@ -160,4 +169,11 @@ class SubscriptionService:
                 .all()
         ]
 
-        return filter(lambda s: s.matches(bucket, key), subs)
+        subs = filter(lambda s: s.matches(bucket, key), subs)
+        self._log.debug('Found subscriptions matching bucket="{b}" key="{k}": {s}'.format(
+            b=bucket,
+            k=key,
+            s=subs,
+        ))
+
+        return subs

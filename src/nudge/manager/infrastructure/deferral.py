@@ -60,7 +60,7 @@ class DeferralWorkerResources(ResourceGroup):
                     Image=ts.Ref(self.image),
                     Cpu=64,
                     Memory=256,
-                    LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name, 'def'),
+                    LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name),
                     Environment=nudge.manager.util.env(
                         # todo: get from load location
                         NDG_WRK_DEF_QUEUE_URL=self.config['Env']['QueueUrl'],

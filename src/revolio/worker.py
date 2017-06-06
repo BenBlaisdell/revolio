@@ -73,7 +73,7 @@ class SqsWorker(Worker):
         return boto3.client('sqs', region_name=self._queue_region)
 
     def _get_messages(self):
-        self._logger.info('Polling {} for messages'.format(self._queue_url))
+        self._logger.debug('Polling {} for messages'.format(self._queue_url))
         r = self._sqs_client.receive_message(
             QueueUrl=self._queue_url,
             MaxNumberOfMessages=1,
@@ -83,7 +83,6 @@ class SqsWorker(Worker):
         return r.get('Messages', [])
 
     def _delete_message(self, receipt):
-        self._logger.info('Deleting message {}'.format(receipt))
         self._sqs_client.delete_message(
             QueueUrl=self._queue_url,
             ReceiptHandle=receipt
@@ -93,16 +92,18 @@ class SqsWorker(Worker):
         for msg in self._get_messages():
             self._logger.info('Received message {}'.format(msg['MessageId']))
 
+            body = msg['Body']
+
             try:
-                self._handle_message(msg)
-                self._logger.info('Deleting message {}'.format(msg['MessageId']))
+                self._handle_message(body)
+                self._logger.debug('Deleting message {}'.format(msg['MessageId']))
                 self._delete_message(msg['ReceiptHandle'])
             except:
-                self._logger.error('Error when processing message {id}\n\n{body}\n\n{error}'.format(
-                    id=msg['MessageId'],
-                    body=msg['Body'],
-                    error=json.dumps(traceback.format_exc()),
-                ))
+                self._logger.error('\r'.join([
+                    'Error processing message {}'.format(msg['MessageId']),
+                    body,
+                    '\r'.join(traceback.format_exc().split('\n')),
+                ]))
 
     @abc.abstractmethod
     def _handle_message(self, msg):

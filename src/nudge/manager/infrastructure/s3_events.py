@@ -60,7 +60,7 @@ class S3EventsWorkerResources(ResourceGroup):
                     Image=ts.Ref(self.image),
                     Cpu=64,
                     Memory=256,
-                    LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name, 's3e'),
+                    LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name),
                     Environment=nudge.manager.util.env(
                         # todo: get from load location
                         NDG_WRK_S3E_HOST=self.config['Env']['NudgeHost'],

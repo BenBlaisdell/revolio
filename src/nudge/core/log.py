@@ -19,11 +19,15 @@ class LogService:
         # attach handlers
         self._logger.addHandler(ch)
 
-    def debug(self, msg):
-        self._logger.debug(msg)
+    def debug(self, *msgs):
+        self._log(self._logger.debug, msgs)
 
-    def info(self, msg):
-        self._logger.info(msg)
+    def info(self, *msgs):
+        self._log(self._logger.info, msgs)
 
-    def warning(self, msg):
-        self._logger.warning(msg)
+    def warning(self, *msgs):
+        self._log(self._logger.warning, msgs)
+
+    @staticmethod
+    def _log(log_func, msgs):
+        log_func('\r'.join(msgs))

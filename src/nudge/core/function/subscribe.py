@@ -39,7 +39,7 @@ class Subscribe(rv.Function):
 
         trigger = request.get('Trigger', None)
         if trigger is not None:
-            trigger = Subscription.Trigger.deserialize(trigger)
+            trigger = Subscription.Trigger._deserialize(trigger)
             assert isinstance(trigger, Subscription.Trigger)
 
         # make call

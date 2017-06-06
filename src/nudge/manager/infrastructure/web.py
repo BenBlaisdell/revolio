@@ -140,7 +140,7 @@ class WebResources(ResourceGroup):
                 HostPort=9091,
                 ContainerPort=9091,
             )],
-            LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name, 'app'),
+            LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name),
             Environment=nudge.manager.util.env(
                 # todo: get from load location
                 S3_CONFIG_URI=self.s3_config_uri,
@@ -170,7 +170,7 @@ class WebResources(ResourceGroup):
                 HostPort=8080,
                 ContainerPort=8080,
             )],
-            LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name, 'nginx'),
+            LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name),
             VolumesFrom=[ts.ecs.VolumesFrom(SourceContainer=self.app_container_def.Name)],
         )
 

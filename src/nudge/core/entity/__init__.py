@@ -23,10 +23,3 @@ from nudge.core.entity.batch import (
     BatchOrm,
     BatchService,
 )
-
-
-# from nudge.core.entity.notification import (
-#     Notification,
-#     NotificationOrm,
-#     NotificationService,
-# )

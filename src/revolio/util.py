@@ -1,3 +1,4 @@
+import json
 import re
 
 
@@ -12,3 +13,8 @@ def camel_to_snake(name):
 
 def snake_to_camel(name):
     return ''.join(map(str.capitalize, name.split('_')))
+
+
+def log_dumps(obj):
+    """Dump object to json to be logged."""
+    return json.dumps(obj, separators=(',\r', ': '))

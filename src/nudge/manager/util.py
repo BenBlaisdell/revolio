@@ -83,13 +83,13 @@ def get_bucket(s3_uri):
     return s3_uri[len('s3://'):].split('/', 1)[0]
 
 
-def aws_logs_config(group, prefix, *, region='us-east-1'):
+def aws_logs_config(group, *, region='us-east-1'):
     return ts.ecs.LogConfiguration(
         LogDriver='awslogs',
         Options={
             'awslogs-group': group,
             'awslogs-region': region,
-            'awslogs-stream-prefix': prefix,
+            'awslogs-stream-prefix': 'logs',
         },
     )
 

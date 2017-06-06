@@ -4,6 +4,7 @@ import re
 import uuid
 
 import revolio as rv
+from revolio.serializable import KeyFormat
 import sqlalchemy as sa
 
 from nudge.core.entity import EntityOrm
@@ -18,10 +19,7 @@ class SubscriptionEndpoint(rv.Serializable):
     Protocol = SubscriptionEndpointProtocol
 
     @staticmethod
-    def deserialize(data):
-        if data is None:
-            return None
-
+    def _deserialize(data):
         protocol = SubscriptionEndpoint.Protocol[data['Protocol']]
         params = data['Parameters']
 
@@ -39,7 +37,7 @@ class SqsEndpoint(SubscriptionEndpoint):
         super(SqsEndpoint, self).__init__()
         self._queue_url = queue_url
 
-    def serialize(self):
+    def _serialize(self):
         return {
             'Protocol': 'SQS',
             'Parameters': {
@@ -48,8 +46,8 @@ class SqsEndpoint(SubscriptionEndpoint):
         }
 
     @staticmethod
-    def deserialize(data):
-        return None if (data is None) else SqsEndpoint(
+    def _deserialize(data):
+        return SqsEndpoint(
             queue_url=data['QueueUrl'],
         )
 
@@ -88,7 +86,7 @@ class SubscriptionTrigger(rv.Serializable):
         self._threshold = threshold
         self._custom = custom
 
-    def serialize(self):
+    def _serialize(self):
         return {
             'Endpoint': self._endpoint.serialize(),
             'Threshold': self._threshold,
@@ -96,7 +94,7 @@ class SubscriptionTrigger(rv.Serializable):
         }
 
     @staticmethod
-    def deserialize(data):
+    def _deserialize(data):
         return None if (data is None) else SubscriptionTrigger(
             endpoint=SubscriptionTrigger.Endpoint.deserialize(data.get('Endpoint', None)),
             threshold=data.get('Threshold', DEFAULT_THRESHOLD),
@@ -157,7 +155,7 @@ class Subscription(rv.Entity):
             prefix=prefix,
             data=dict(
                 regex=regex,
-                trigger=trigger.serialize() if (trigger is not None) else None,
+                trigger=trigger.serialize(key_format=KeyFormat.Snake) if (trigger is not None) else None,
             )
         ))
 

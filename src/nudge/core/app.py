@@ -55,15 +55,15 @@ class App:
 
         return self.flask_app(environ, start_response)
 
-    @property
-    def config(self):
-        return self._app.config
-
     def run(self):
         # with self._app.app_context():
         #     self._db.create_tables()
 
         self._app.run()
+
+    @property
+    def config(self):
+        return self._app.config
 
     @property
     def flask_app(self):

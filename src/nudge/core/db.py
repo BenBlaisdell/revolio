@@ -1,4 +1,6 @@
 import flask_sqlalchemy
+import sqlalchemy as sa
+
 from nudge.core.entity import EntityOrm
 
 
@@ -35,7 +37,12 @@ class Database:
 
     def drop_tables(self):
         self._log.info('Dropping tables')
-        EntityOrm.metadata.drop_all(bind=self._engine)
+        # reflect to include tables not defined in code
+        meta = sa.MetaData()
+        meta.reflect(bind=self._engine)
+        for table in reversed(meta.sorted_tables):
+            self._log.info('Dropping table: {}'.format(table.name))
+            table.drop(bind=self._engine)
 
     def add(self, entity):
         self._session.add(entity.orm)

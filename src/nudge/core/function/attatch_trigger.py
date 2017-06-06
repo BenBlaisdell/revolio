@@ -14,7 +14,7 @@ class AttachTrigger(rv.Function):
     def format_request(self, sub_id, trigger):
         return {
             'SubscriptionId': sub_id,
-            'Trigger': trigger.serialize(),
+            'Trigger': trigger._serialize(),
         }
 
     def handle_request(self, request):

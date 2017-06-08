@@ -1,5 +1,6 @@
 import abc
 import enum
+import json
 import re
 import uuid
 
@@ -7,7 +8,7 @@ import revolio as rv
 from revolio.serializable import KeyFormat
 import sqlalchemy as sa
 
-from nudge.core.entity import EntityOrm
+from nudge.core.entity import Orm, Batch, Element
 
 
 class SubscriptionEndpointProtocol(enum.Enum):
@@ -28,6 +29,10 @@ class SubscriptionEndpoint(rv.Serializable):
 
     @abc.abstractmethod
     def send_message(self, ctx, msg):
+        """
+        
+        :type msg: dict
+        """
         pass
 
 
@@ -54,7 +59,7 @@ class SqsEndpoint(SubscriptionEndpoint):
     def send_message(self, ctx, msg):
         ctx.sqs.send_message(
             QueueUrl=self._queue_url,
-            MessageBody=msg,
+            MessageBody=json.dumps(msg),
         )
 
 
@@ -146,6 +151,10 @@ class Subscription(rv.Entity):
         assert isinstance(trigger, Subscription.Trigger)
         self._orm.data['trigger'] = trigger.serialize()
 
+    @property
+    def subscriber_ping_data(self):
+        return self.trigger.custom if (self.trigger.custom is not None) else {'SubscriptionId': self.id}
+
     @staticmethod
     def create(bucket, *, prefix=None, regex=None, trigger=None):
         return Subscription(SubscriptionOrm(
@@ -176,7 +185,7 @@ class Subscription(rv.Entity):
 # orm
 
 
-class SubscriptionOrm(EntityOrm):
+class SubscriptionOrm(Orm):
     __tablename__ = 'subscription'
 
     id = sa.Column(sa.String, primary_key=True)
@@ -190,10 +199,12 @@ class SubscriptionOrm(EntityOrm):
 
 class SubscriptionService:
 
-    def __init__(self, db, log):
+    def __init__(self, ctx, db, log, elem_srv):
         super(SubscriptionService, self).__init__()
+        self._ctx = ctx
         self._db = db
         self._log = log
+        self._elem_srv = elem_srv
 
     def get_subscription(self, sub_id):
         orm = self._db \
@@ -225,3 +236,32 @@ class SubscriptionService:
         ))
 
         return subs
+
+    def evaluate(self, sub):
+        elems = self._elem_srv.get_sub_elems(sub.id, state=Element.State.Unconsumed)
+        if _batch_size(elems) >= sub.trigger.threshold:
+            return self._create_and_send_batch(sub, elems)
+
+        return None
+
+    def _create_and_send_batch(self, sub, elems):
+        batch = self._db.add(Batch.create(sub.id))
+
+        for elem in elems:
+            assert elem.sub_id == sub.id
+            assert elem.state == Element.State.Unconsumed
+            elem.state = Element.State.Batched
+            elem.batch_id = batch.id
+
+        self._db.flush()
+
+        sub.trigger.endpoint.send_message(
+            ctx=self._ctx,
+            msg=sub.subscriber_ping_data,
+        )
+
+        return batch
+
+
+def _batch_size(elems):
+    return sum(e.size for e in elems)

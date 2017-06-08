@@ -43,7 +43,7 @@ class SecretsResources(ResourceGroup):
     def bucket(self):
         return ts.s3.Bucket(
             self._get_logical_id('Bucket'),
-            DeletionPolicy='Retain',  # do not delete bucket on deletion of stack
+            # DeletionPolicy='Retain',  # do not delete bucket on deletion of stack
             BucketName=self.bucket_name,
         )
 

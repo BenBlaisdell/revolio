@@ -5,7 +5,7 @@ import uuid
 import revolio as rv
 import sqlalchemy as sa
 
-from nudge.core.entity import EntityOrm
+from nudge.core.entity import Orm
 
 
 class Element(rv.Entity):
@@ -15,9 +15,8 @@ class Element(rv.Entity):
         return self._orm.id
 
     class State(enum.Enum):
-        Unconsumed = 'Unconsumed'
-        Batched = 'Batched'
-        Consumed = 'Consumed'
+        AVAILABLE = 'AVAILABLE'
+        BATCHED = 'BATCHED'
 
     @property
     def state(self):
@@ -60,7 +59,7 @@ class Element(rv.Entity):
     def create(sub_id, bucket, key, size, created, *, batch_id=None):
         return Element(ElementOrm(
             id=str(uuid.uuid4()),
-            state=Element.State.Unconsumed.value,
+            state=Element.State.AVAILABLE.value,
             sub_id=sub_id,
             batch_id=batch_id,
             data=dict(
@@ -82,7 +81,7 @@ class Element(rv.Entity):
 # orm
 
 
-class ElementOrm(EntityOrm):
+class ElementOrm(Orm):
     __tablename__ = 'element'
 
     id = sa.Column(sa.String, primary_key=True)
@@ -113,7 +112,7 @@ class ElementService:
         self._log.debug('Found elements by id: {}'.format(elems))
         return elems
 
-    def get_sub_elems(self, sub_id, *, state=Element.State.Unconsumed):
+    def get_sub_elems(self, sub_id, *, state=Element.State.AVAILABLE):
         elems = [
             Element(orm)
             for orm in self._db
@@ -132,7 +131,7 @@ class ElementService:
             for orm in self._db
                 .query(ElementOrm)
                 .filter(ElementOrm.sub_id == batch.sub_id)
-                .filter(ElementOrm.state == Element.State.Batched.value)
+                .filter(ElementOrm.state == Element.State.BATCHED.value)
                 .filter(ElementOrm.batch_id == batch.id)
                 .limit(limit)
                 .offset(offset)

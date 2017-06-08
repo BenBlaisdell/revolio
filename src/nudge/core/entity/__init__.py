@@ -1,14 +1,7 @@
 import revolio as rv
 
 
-EntityOrm = rv.declarative_base()
-
-
-from nudge.core.entity.subscription import (
-    Subscription,
-    SubscriptionOrm,
-    SubscriptionService,
-)
+Orm = rv.declarative_base()
 
 
 from nudge.core.entity.element import (
@@ -22,4 +15,11 @@ from nudge.core.entity.batch import (
     Batch,
     BatchOrm,
     BatchService,
+)
+
+
+from nudge.core.entity.subscription import (
+    Subscription,
+    SubscriptionOrm,
+    SubscriptionService,
 )

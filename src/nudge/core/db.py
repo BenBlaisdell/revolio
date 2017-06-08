@@ -1,7 +1,7 @@
 import flask_sqlalchemy
 import sqlalchemy as sa
 
-from nudge.core.entity import EntityOrm
+from nudge.core.entity import Orm
 
 
 class Database:
@@ -33,7 +33,7 @@ class Database:
 
     def create_tables(self):
         self._log.info('Creating tables')
-        EntityOrm.metadata.create_all(bind=self._engine)
+        Orm.metadata.create_all(bind=self._engine)
 
     def drop_tables(self):
         self._log.info('Dropping tables')

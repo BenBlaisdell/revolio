@@ -78,7 +78,8 @@ class DatabaseResources(ResourceGroup):
     def db(self):
         return ts.rds.DBInstance(
             self._get_logical_id('Instance'),
-            DeletionPolicy='Retain',  # do not delete db on deletion of stack
+            # DeletionPolicy='Retain',  # do not delete db on deletion of stack
+            DBInstanceIdentifier=self.db_identifier,
             DBName=self.db_name,
             MasterUsername=self.db_username,
             MasterUserPassword=ts.Ref(self.password),

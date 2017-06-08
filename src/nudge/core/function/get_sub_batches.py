@@ -36,11 +36,22 @@ class GetSubscriptionBatches(rv.Function):
         # format response
 
         return {
-            'BatchIds': [batch.id for batch in batches],
+            'Batches': [
+                {
+                    'Id': batch.id,
+                    'State': batch.state,
+                }
+                for batch in batches
+            ],
         }
 
     def __call__(self, sub_id, *, prev_id=None):
         self._log.info('Handling call: GetSubscriptionBatches')
-        batches = self._batch_srv.get_subscription_batches(sub_id, prev_id)
+        batches = self._batch_srv.get_subscription_batches(
+            sub_id=sub_id,
+            prev_id=prev_id,
+        )
+
         self._db.commit()
+
         return batches

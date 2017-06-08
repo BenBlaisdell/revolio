@@ -38,6 +38,17 @@ class DeferralWorkerResources(ResourceGroup):
             self._get_logical_id('Queue'),
             QueueName=self.config['QueueName'],
             VisibilityTimeout=60*5,  # 5 minutes
+            RedrivePolicy=ts.sqs.RedrivePolicy(
+                deadLetterTargetArn=ts.GetAtt(self.dlq, 'Arn'),
+                maxReceiveCount=3,
+            ),
+        )
+
+    @resource
+    def dlq(self):
+        return ts.sqs.Queue(
+            self._get_logical_id('Dlq'),
+            QueueName=self.config['DlqName'],
         )
 
     @parameter

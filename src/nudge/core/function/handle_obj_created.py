@@ -80,38 +80,4 @@ class HandleObjectCreated(rv.Function):
             created=created,
         ))
 
-        return elem, self._evaluate_sub(sub)
-
-    def _evaluate_sub(self, sub):
-        elems = self._elem_srv.get_sub_elems(sub.id, state=Element.State.Unconsumed)
-        if _batch_size(elems) >= sub.trigger.threshold:
-            return self._create_and_send_batch(sub, elems)
-
-        return None
-
-    def _create_and_send_batch(self, sub, elems):
-        batch = self._db.add(Batch.create(sub.id))
-
-        for elem in elems:
-            assert elem.sub_id == sub.id
-            assert elem.state == Element.State.Unconsumed
-            elem.state = Element.State.Batched
-            elem.batch_id = batch.id
-
-        self._db.flush()
-
-        if sub.trigger.custom is not None:
-            msg = json.dumps(sub.trigger.custom)
-        else:
-            msg = json.dumps({
-                'SubscriptionId': sub.id,
-                'BatchId': batch.id,
-            })
-
-        sub.trigger.endpoint.send_message(ctx=self._ctx, msg=msg)
-
-        return batch
-
-
-def _batch_size(elems):
-    return sum(e.size for e in elems)
+        return elem, self._sub_srv.evaluate(sub)

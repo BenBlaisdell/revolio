@@ -44,10 +44,8 @@ class Consume(rv.Function):
         self._log.info('Handling call: Consume')
 
         batch = self._batch_srv.get_batch(batch_id)
-        assert batch.sub_id == sub_id
-        batch.state = Batch.State.Consumed
+        assert batch.state == Batch.State.UNCONSUMED
 
-        for elem in self._elem_srv.get_batch_elems(batch):
-            elem.state = Element.State.Consumed
+        batch.state = Batch.State.CONSUMED
 
         self._db.commit()

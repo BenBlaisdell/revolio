@@ -1,4 +1,5 @@
 import re
+import time
 
 from cached_property import threaded_cached_property
 import ruamel.yaml as ryaml
@@ -23,6 +24,7 @@ class ConfigService:
                 return self._s3.get_object(**_parse_s3_uri(self._config_s3_uri))['Body']
             except Exception as e:
                 self._log.warning('Error fetching S3 config: {}'.format(str(e)))
+                time.sleep(5)
 
     def __getitem__(self, key):
         return self._config[key]

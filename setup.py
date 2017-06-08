@@ -16,6 +16,7 @@ setup(
         'flask',
         'flask-sqlalchemy',
         'marshmallow',
+        'packaging',
         'psycopg2',
         'requests',
         'ruamel.yaml',

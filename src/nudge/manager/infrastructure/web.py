@@ -18,7 +18,7 @@ import troposphere.cloudformation
 import troposphere.cloudwatch
 import troposphere.ec2
 import troposphere.ecs
-import troposphere.elasticloadbalancing
+import troposphere.elasticloadbalancingv2
 import troposphere.iam
 import troposphere.logs
 import troposphere.sqs
@@ -26,13 +26,25 @@ import troposphere.route53
 from cached_property import cached_property
 
 import nudge.manager.util
-from revolio.manager.stack import resource, parameter, ResourceGroup
+from revolio.manager.stack import resource, resource_group, parameter, ResourceGroup
 
 
 _logger = logging.getLogger(__name__)
 
 
 class WebResources(ResourceGroup):
+
+    @cached_property
+    def external_service_name(self):
+        return self.config['External']['ServiceName']
+
+    @cached_property
+    def external_elb_name(self):
+        return self.config['External']['ElbName']
+
+    @cached_property
+    def external_target_group_name(self):
+        return self.config['External']['TargetGroupName']
 
     @cached_property
     def subnets(self):
@@ -69,10 +81,6 @@ class WebResources(ResourceGroup):
     @cached_property
     def hosted_zone_name(self):
         return self.config['HostedZoneName']
-
-    @cached_property
-    def record_set_name(self):
-        return self.config['RecordSetName']
 
     @cached_property
     def ec2_instance_type(self):
@@ -135,11 +143,11 @@ class WebResources(ResourceGroup):
             Image=ts.Ref(self.app_image),
             Cpu=64,
             Memory=256,
-            PortMappings=[ts.ecs.PortMapping(
-                # todo: move to config file
-                HostPort=9091,
-                ContainerPort=9091,
-            )],
+            # PortMappings=[ts.ecs.PortMapping(
+            #     # todo: move to config file
+            #     HostPort=9091,
+            #     ContainerPort=9091,
+            # )],
             LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name),
             Environment=nudge.manager.util.env(
                 # todo: get from load location
@@ -167,7 +175,7 @@ class WebResources(ResourceGroup):
             Memory=256,
             PortMappings=[ts.ecs.PortMapping(
                 # todo: move to config file
-                HostPort=8080,
+                HostPort=0,  # dynamically generated
                 ContainerPort=8080,
             )],
             LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name),
@@ -182,32 +190,6 @@ class WebResources(ResourceGroup):
                 self.nginx_container_def,
                 self.app_container_def,
             ],
-        )
-
-    @resource
-    def ecs_service_role(self):
-        return ts.iam.Role(
-            self._get_logical_id('ServiceRole'),
-            AssumeRolePolicyDocument=awacs.aws.Policy(
-                Statement=[awacs.helpers.trust.make_simple_assume_statement('ecs.amazonaws.com')],
-            ),
-            Path='/',
-            Policies=[ts.iam.Policy(
-                PolicyName='dwh-nudge-web',
-                PolicyDocument=awacs.aws.Policy(
-                    Statement=[awacs.aws.Statement(
-                        Effect='Allow',
-                        Action=[
-                            awacs.elasticloadbalancing.Action('Describe*'),
-                            awacs.elasticloadbalancing.DeregisterInstancesFromLoadBalancer,
-                            awacs.elasticloadbalancing.RegisterInstancesWithLoadBalancer,
-                            awacs.ec2.Action('Describe*'),
-                            awacs.ec2.AuthorizeSecurityGroupIngress,
-                        ],
-                        Resource=['*'],
-                    )],
-                ),
-            )],
         )
 
     @resource
@@ -309,16 +291,39 @@ class WebResources(ResourceGroup):
             Roles=[ts.Ref(self.ec2_instance_profile_role)],
         )
 
+    # @resource
+    # def ecs_service(self):
+    #     return ts.ecs.Service(
+    #         self._get_logical_id('EcsService'),
+    #         ServiceName='internal',
+    #         Cluster=ts.Ref(self.ecs_cluster),
+    #         DesiredCount=2,
+    #         LoadBalancers=[ts.ecs.LoadBalancer(
+    #             ContainerName='nginx',
+    #             ContainerPort=8080,
+    #             LoadBalancerName=ts.Ref(self.internal_elb),
+    #         )],
+    #         Role=ts.Ref(self.ecs_service_role),
+    #         TaskDefinition=ts.Ref(self.ecs_task_def),
+    #         # allow ecs to stop and replace tasks
+    #         # port usage prevents replacement otherwise
+    #         DeploymentConfiguration=ts.ecs.DeploymentConfiguration(
+    #             MaximumPercent=100,
+    #             MinimumHealthyPercent=50,
+    #         ),
+    #     )
+
     @resource
-    def ecs_service(self):
+    def external_ecs_service(self):
         return ts.ecs.Service(
-            self._get_logical_id('EcsService'),
+            self._get_logical_id('ExtEcsService'),
+            ServiceName=self.external_service_name,
             Cluster=ts.Ref(self.ecs_cluster),
             DesiredCount=2,
             LoadBalancers=[ts.ecs.LoadBalancer(
                 ContainerName='nginx',
                 ContainerPort=8080,
-                LoadBalancerName=ts.Ref(self.elastic_load_balancer),
+                TargetGroupArn=ts.Ref(self.external_elb_target_group),
             )],
             Role=ts.Ref(self.ecs_service_role),
             TaskDefinition=ts.Ref(self.ecs_task_def),
@@ -328,6 +333,35 @@ class WebResources(ResourceGroup):
                 MaximumPercent=100,
                 MinimumHealthyPercent=50,
             ),
+            DependsOn=[self.external_elb_listener.title],
+        )
+
+    @resource
+    def ecs_service_role(self):
+        return ts.iam.Role(
+            self._get_logical_id('ServiceRole'),
+            AssumeRolePolicyDocument=awacs.aws.Policy(
+                Statement=[awacs.helpers.trust.make_simple_assume_statement('ecs.amazonaws.com')],
+            ),
+            Path='/',
+            Policies=[ts.iam.Policy(
+                PolicyName='dwh-nudge-web',
+                PolicyDocument=awacs.aws.Policy(
+                    Statement=[awacs.aws.Statement(
+                        Effect='Allow',
+                        Action=[
+                            awacs.elasticloadbalancing.Action('Describe*'),
+                            awacs.elasticloadbalancing.RegisterTargets,
+                            awacs.elasticloadbalancing.DeregisterTargets,
+                            awacs.elasticloadbalancing.DeregisterInstancesFromLoadBalancer,
+                            awacs.elasticloadbalancing.RegisterInstancesWithLoadBalancer,
+                            awacs.ec2.Action('Describe*'),
+                            awacs.ec2.AuthorizeSecurityGroupIngress,
+                        ],
+                        Resource=['*'],
+                    )],
+                ),
+            )],
         )
 
     @resource
@@ -344,57 +378,15 @@ class WebResources(ResourceGroup):
                     CidrIp=ip,
                 )
                 for lower, upper in [
-                    (80, 8080),  # api
-                    (22, 22),    # ssh
+                    (32768, 61000),  # ephemeral ports
+                    (80, 8080),      # api
+                    (22, 22),        # ssh
                 ]
                 for ip in itertools.chain(
                     ['10.0.0.0/8', '172.16.0.0/12'],  # addresses inside vpc
                     self.authorized_ips,
                 )
             ],
-        )
-
-    @resource
-    def elastic_load_balancer(self):
-        return ts.elasticloadbalancing.LoadBalancer(
-            self._get_logical_id('Elb'),
-            CrossZone=True,
-            Scheme='internet-facing',
-            Subnets=self.subnets,
-            SecurityGroups=[ts.Ref(self.security_group)],
-            Listeners=[ts.elasticloadbalancing.Listener(
-                LoadBalancerPort=80,
-                InstancePort=8080,
-                Protocol='HTTP',
-            )],
-            HealthCheck=ts.elasticloadbalancing.HealthCheck(
-                # todo: get from definition of call endpoint
-                Target='HTTP:8080/api/1/call/CheckHealth/',
-                HealthyThreshold=2,
-                UnhealthyThreshold=7,
-                Interval=30,
-                Timeout=10,
-            ),
-            ConnectionDrainingPolicy=ts.elasticloadbalancing.ConnectionDrainingPolicy(
-                Enabled=True,
-                Timeout=300,
-            ),
-        )
-
-    @resource
-    def record_set_group(self):
-        return ts.route53.RecordSetGroup(
-            self._get_logical_id('RecordSetGroup'),
-            HostedZoneName=self.hosted_zone_name,
-            RecordSets=[ts.route53.RecordSet(
-                Name=self.record_set_name,
-                Type='A',
-                AliasTarget=ts.route53.AliasTarget(
-                    EvaluateTargetHealth=False,
-                    DNSName=ts.GetAtt(self.elastic_load_balancer, 'CanonicalHostedZoneName'),
-                    HostedZoneId=ts.GetAtt(self.elastic_load_balancer, 'CanonicalHostedZoneNameID'),
-                ),
-            )],
         )
 
     # ec2 instance autoscaling
@@ -414,14 +406,18 @@ class WebResources(ResourceGroup):
             LaunchConfigurationName=ts.Ref(self.ec2_launch_config),
             VPCZoneIdentifier=self.subnets,
             AvailabilityZones=self.zones,
-            MinSize=2,
+            MinSize=1,
             MaxSize=5,
             HealthCheckType='ELB',
             HealthCheckGracePeriod=900,
-            LoadBalancerNames=[ts.Ref(self.elastic_load_balancer)],
+            TargetGroupARNs=[ts.Ref(self.external_elb_target_group)],
             # don't launch service until config is uploaded
             # DependsOn=self.env.secrets.wait_condition.title,
         )
+
+    @resource_group
+    def ec2_scaling(self):
+        return
 
     @resource
     def ec2_launch_config(self):
@@ -511,11 +507,73 @@ class WebResources(ResourceGroup):
             '\n',
         ]))
 
+    @resource
+    def external_record_set_group(self):
+        return ts.route53.RecordSetGroup(
+            self._get_logical_id('ExternalRecordSetGroup'),
+            HostedZoneName=self.hosted_zone_name,
+            RecordSets=[ts.route53.RecordSet(
+                Name=self.config['External']['RecordSetName'],
+                Type='A',
+                AliasTarget=ts.route53.AliasTarget(
+                    EvaluateTargetHealth=False,
+                    DNSName=ts.GetAtt(self.external_elb, 'DNSName'),
+                    HostedZoneId=ts.GetAtt(self.external_elb, 'CanonicalHostedZoneID'),
+                ),
+            )],
+        )
+
+    @resource
+    def external_elb(self):
+        return ts.elasticloadbalancingv2.LoadBalancer(
+            self._get_logical_id('ExtElb'),
+            Name=self.external_elb_name,
+            Scheme='internet-facing',
+            Subnets=self.subnets,
+            SecurityGroups=[ts.Ref(self.security_group)],
+            # LoadBalancerAttributes=[
+            #     ts.elasticloadbalancingv2.LoadBalancerAttributes(Key=k, Value=v)
+            #     for k, v in [
+            #         ('access_logs.s3.enabled', 'true'),
+            #         ('access_logs.s3.bucket', self.config['External']['AccessLogsBucket']),
+            #     ]
+            # ],
+        )
+
+    @resource
+    def external_elb_target_group(self):
+        return ts.elasticloadbalancingv2.TargetGroup(
+            self._get_logical_id('ExtElbTargetGroup'),
+            Name=self.external_target_group_name,
+            HealthCheckIntervalSeconds=30,
+            HealthCheckProtocol='HTTP',
+            HealthCheckTimeoutSeconds=10,
+            HealthyThresholdCount=4,
+            HealthCheckPath='/api/1/call/CheckHealth/',
+            Port=8080,
+            Protocol='HTTP',
+            UnhealthyThresholdCount=4,
+            VpcId=self.vpc_id,
+        )
+
+    @resource
+    def external_elb_listener(self):
+        return ts.elasticloadbalancingv2.Listener(
+            self._get_logical_id('ExtElbListener'),
+            Protocol='HTTP',
+            Port=80,
+            LoadBalancerArn=ts.Ref(self.external_elb),
+            DefaultActions=[ts.elasticloadbalancingv2.Action(
+                Type='forward',
+                TargetGroupArn=ts.Ref(self.external_elb_target_group),
+            )]
+        )
+
 
 class Scaling(ResourceGroup):
 
     def __init__(self, prefix, autoscaling_group):
-        super(Scaling, self).__init__({}, prefix=prefix)
+        super().__init__({}, prefix=prefix)
         self.autoscaling_group = autoscaling_group
 
     @resource
@@ -575,6 +633,3 @@ class Scaling(ResourceGroup):
             )],
             ComparisonOperator='LessThanThreshold',
         )
-
-
-

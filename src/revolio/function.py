@@ -1,5 +1,4 @@
 import abc
-import collections
 
 
 class Function(metaclass=abc.ABCMeta):
@@ -43,7 +42,7 @@ class Function(metaclass=abc.ABCMeta):
 
     @property
     def url(self):
-        return '{host}/{path}'.format(
+        return 'http://{host}{path}'.format(
             host=self._ctx.config['Web']['RecordSetName'],
             path=self.url_path,
         )

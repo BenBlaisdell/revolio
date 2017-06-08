@@ -92,16 +92,14 @@ class SqsWorker(Worker):
         for msg in self._get_messages():
             self._logger.info('Received message {}'.format(msg['MessageId']))
 
-            body = msg['Body']
-
             try:
-                self._handle_message(body)
+                self._handle_message(json.loads(msg['Body']))
                 self._logger.debug('Deleting message {}'.format(msg['MessageId']))
                 self._delete_message(msg['ReceiptHandle'])
             except:
                 self._logger.error('\r'.join([
                     'Error processing message {}'.format(msg['MessageId']),
-                    body,
+                    msg['Body'],
                     '\r'.join(traceback.format_exc().split('\n')),
                 ]))
 

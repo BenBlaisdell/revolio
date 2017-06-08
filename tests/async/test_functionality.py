@@ -57,7 +57,7 @@ def test_functionality(nudge):
         created=dt.datetime.strptime('2017-05-15 01:00:00', '%Y-%m-%d %H:%M:%S'),
     )
 
-    assert elem1.state == Element.State.Unconsumed
+    assert elem1.state == Element.State.AVAILABLE
     assert batch1 is None
 
     ((elem2, batch2),) = nudge.handle_object_created(
@@ -67,8 +67,8 @@ def test_functionality(nudge):
         created=dt.datetime.strptime('2017-05-15 02:00:00', '%Y-%m-%d %H:%M:%S'),
     )
 
-    assert elem2.state == elem1.state == Element.State.Batched
+    assert elem2.state == elem1.state == Element.State.BATCHED
     assert isinstance(batch2, Batch)
 
     nudge.consume(sub.id, batch2.id)
-    assert elem2.state == elem1.state == Element.State.Consumed
+    assert elem2.state == elem1.state == Element.State.CONSUMED

@@ -1,6 +1,6 @@
 import revolio as rv
 
-from nudge.core.entity.subscription import SubscriptionTrigger
+from nudge.core.entity.subscription import SubscriptionTrigger, Subscription
 
 
 class AttachTrigger(rv.Function):
@@ -14,7 +14,7 @@ class AttachTrigger(rv.Function):
     def format_request(self, sub_id, trigger):
         return {
             'SubscriptionId': sub_id,
-            'Trigger': trigger._serialize(),
+            'Trigger': trigger.serialize(),
         }
 
     def handle_request(self, request):
@@ -30,19 +30,28 @@ class AttachTrigger(rv.Function):
 
         # make call
 
-        self(
+        triggered = self(
             sub_id=sub_id,
             trigger=trigger,
         )
 
         # format response
 
-        return {'Message': 'Success'}
+        return {
+            'Triggered': triggered,
+        }
 
     def __call__(self, sub_id, trigger):
         self._log.info('Handling call: AttachTrigger')
 
         sub = self._sub_srv.get_subscription(sub_id)
+        assert sub.state == Subscription.State.Active
+
+        assert sub.trigger is None
         sub.trigger = trigger
 
+        triggered = self._sub_srv.evaluate(sub)
+
         self._db.commit()
+
+        return triggered

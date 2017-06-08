@@ -12,4 +12,4 @@ if __name__ == '__main__':
     )
 
     with ctx.app.flask_app.app_context():
-        ctx.db.drop_tables()
+        ctx.db.recreate_tables()

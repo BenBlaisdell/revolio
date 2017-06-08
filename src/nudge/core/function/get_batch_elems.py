@@ -13,17 +13,16 @@ class GetBatchElements(rv.Function):
         self._log = log
         self._db = db
 
-    def format_request(self, sub_id, batch_id, *, offset=0, limit=None, gte_s3_path=None):
+    def format_request(self, sub_id, batch_id, *, offset=0, limit=None):
         return {
             'SubscriptionId': sub_id,
             'BatchId': batch_id,
             'Offset': offset,
             'Limit': limit,
-            'GteS3Path': gte_s3_path,
         }
 
     def handle_request(self, request):
-        self._log.info('Handling request: GetBatch')
+        self._log.info('Handling request: GetBatchElements')
 
         subscription_id = request['SubscriptionId']
         assert isinstance(subscription_id, str)
@@ -36,9 +35,6 @@ class GetBatchElements(rv.Function):
 
         limit = request.get('Limit', None)
         assert isinstance(limit, int) or (limit is None)
-
-        gte_s3_path = request.get('GteS3Path', None)
-        assert isinstance(gte_s3_path, str) or (gte_s3_path is None)
 
         # make call
         elems = self(
@@ -58,15 +54,14 @@ class GetBatchElements(rv.Function):
                     'Bucket': elem.bucket,
                     'Key': elem.key,
                     'Size': elem.size,
-                    'S3Created': dt.datetime.strftime(elem.s3_created, '%Y-%m-%d %H:%M:%S'),
-                    'Updated': dt.datetime.strftime(elem.updated, '%Y-%m-%d %H:%M:%S'),
+                    'Created': dt.datetime.strftime(elem.s3_created, '%Y-%m-%d %H:%M:%S'),
                 }
                 for elem in elems
             ],
         }
 
     def __call__(self, sub_id, batch_id, *, offset=0, limit=None):
-        self._log.info('Handling call: GetBatch')
+        self._log.info('Handling call: GetBatchElements')
         elems = self._elem_srv.get_batch_elems(
             sub_id=sub_id,
             batch_id=batch_id,

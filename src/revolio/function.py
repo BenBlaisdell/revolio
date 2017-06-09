@@ -41,8 +41,15 @@ class Function(metaclass=abc.ABCMeta):
         )
 
     @property
-    def url(self):
+    def external_url(self):
         return 'http://{host}{path}'.format(
-            host=self._ctx.config['Web']['RecordSetName'],
+            host=self._ctx.config['Web']['External']['RecordSetName'],
+            path=self.url_path,
+        )
+
+    @property
+    def internal_url(self):
+        return 'http://{host}{path}'.format(
+            host=self._ctx.config['Web']['Internal']['RecordSetName'],
             path=self.url_path,
         )

@@ -45,6 +45,29 @@ class S3EventsWorkerResources(ResourceGroup):
         )
 
     @resource
+    def queue_policy(self):
+        return ts.sqs.QueuePolicy(
+            self._get_logical_id('QueuePolicy'),
+            Queues=[ts.Ref(self.queue)],
+            PolicyDocument={
+                'Version': '2012-10-17',
+                'Statement': [{
+                    'Sid': 'allow-s3-notifications',
+                    'Effect': 'Allow',
+                    'Principal': {
+                      'AWS': '*'
+                    },
+                    'Action': ['sqs:SendMessage'],
+                    'Resource': '*',
+                    'Condition': {
+                        # allow notifications from all buckets
+                        'ArnLike': {'aws:SourceArn': 'arn:aws:s3:*:*:*'}
+                    }
+                }]
+            },
+        )
+
+    @resource
     def dlq(self):
         return ts.sqs.Queue(
             self._get_logical_id('Dlq'),

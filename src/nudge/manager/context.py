@@ -56,6 +56,17 @@ class NudgeCommandContext(object):
         self._save_resource('stack/template.json', template)
 
     @cached_property
+    def revolio_config(self):
+        return self.stack_config['Revolio']
+
+    @cached_property
+    def template_key(self):
+        return 'nudge-template-{timestamp}-{uuid}'.format(
+            timestamp=dt.datetime.now().strftime('%Y-%m-%d-%H-%M-%S'),
+            uuid=uuid.uuid4(),
+        )
+
+    @cached_property
     def stack(self):
         return EnvResources(self, self.stack_config)
 

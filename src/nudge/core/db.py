@@ -21,6 +21,7 @@ class Database:
 
     def init_app(self, app):
         app.config.update(
+            SQLALCHEMY_ECHO=False,  # logger output captured
             SQLALCHEMY_TRACK_MODIFICATIONS=False,
             SQLALCHEMY_DATABASE_URI=self._db_uri,
         )

@@ -13,11 +13,16 @@ class LogService:
         ch.setLevel(logging.DEBUG)
 
         # formatter
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         ch.setFormatter(formatter)
 
         # attach handlers
         self._logger.addHandler(ch)
+
+        # sqlalchemy logging
+        sa_logger = logging.getLogger('sqlalchemy.engine')
+        sa_logger.setLevel(logging.INFO)
+        sa_logger.addHandler(ch)
 
     def debug(self, *msgs):
         self._log(self._logger.debug, msgs)

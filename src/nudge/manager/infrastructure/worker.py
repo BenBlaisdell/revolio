@@ -137,7 +137,7 @@ class WorkerResources(ResourceGroup):
             AvailabilityZones=self.zones,
             MinSize=1,
             MaxSize=5,
-            HealthCheckType='ELB',
+            HealthCheckType='EC2',
             HealthCheckGracePeriod=900,
             # don't launch service until config is uploaded
             # DependsOn=self.env.secrets.wait_condition.title,

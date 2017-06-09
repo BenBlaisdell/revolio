@@ -1,8 +1,10 @@
 import itertools
 import logging
 
+import awacs.application_autoscaling
 import awacs.autoscaling
 import awacs.aws
+import awacs.cloudwatch
 import awacs.ec2
 import awacs.ecs
 import awacs.elasticloadbalancing
@@ -13,6 +15,7 @@ import awacs.logs
 import awacs.s3
 import awacs.sqs
 import troposphere as ts
+import troposphere.applicationautoscaling
 import troposphere.autoscaling
 import troposphere.cloudformation
 import troposphere.cloudwatch
@@ -125,73 +128,6 @@ class WebResources(ResourceGroup):
             ClusterName=self.cluster_name,
         )
 
-    @parameter
-    def app_image(self):
-        return ts.Parameter(
-            self._get_logical_id('AppImage'),
-            Type='String',
-        )
-
-    @app_image.value
-    def app_image_value(self):
-        return nudge.manager.util.get_latest_image_tag(self.app_repo_uri)
-
-    @cached_property
-    def app_container_def(self):
-        return ts.ecs.ContainerDefinition(
-            Name='app',
-            Image=ts.Ref(self.app_image),
-            Cpu=64,
-            Memory=256,
-            # PortMappings=[ts.ecs.PortMapping(
-            #     # todo: move to config file
-            #     HostPort=9091,
-            #     ContainerPort=9091,
-            # )],
-            LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name),
-            Environment=nudge.manager.util.env(
-                # todo: get from load location
-                S3_CONFIG_URI=self.s3_config_uri,
-            ),
-        )
-
-    @parameter
-    def nginx_image(self):
-        return ts.Parameter(
-            self._get_logical_id('NginxImage'),
-            Type='String',
-        )
-
-    @nginx_image.value
-    def nginx_version_value(self):
-        return nudge.manager.util.get_latest_image_tag(self.nginx_repo_uri)
-
-    @cached_property
-    def nginx_container_def(self):
-        return ts.ecs.ContainerDefinition(
-            Name='nginx',
-            Image=ts.Ref(self.nginx_image),
-            Cpu=64,
-            Memory=256,
-            PortMappings=[ts.ecs.PortMapping(
-                # todo: move to config file
-                HostPort=0,  # dynamically generated
-                ContainerPort=8080,
-            )],
-            LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name),
-            VolumesFrom=[ts.ecs.VolumesFrom(SourceContainer=self.app_container_def.Name)],
-        )
-
-    @resource
-    def ecs_task_def(self):
-        return ts.ecs.TaskDefinition(
-            self._get_logical_id('TaskDefinition'),
-            ContainerDefinitions=[
-                self.nginx_container_def,
-                self.app_container_def,
-            ],
-        )
-
     @resource
     def ec2_instance_profile_role(self):
         return ts.iam.Role(
@@ -291,79 +227,6 @@ class WebResources(ResourceGroup):
             Roles=[ts.Ref(self.ec2_instance_profile_role)],
         )
 
-    # @resource
-    # def ecs_service(self):
-    #     return ts.ecs.Service(
-    #         self._get_logical_id('EcsService'),
-    #         ServiceName='internal',
-    #         Cluster=ts.Ref(self.ecs_cluster),
-    #         DesiredCount=2,
-    #         LoadBalancers=[ts.ecs.LoadBalancer(
-    #             ContainerName='nginx',
-    #             ContainerPort=8080,
-    #             LoadBalancerName=ts.Ref(self.internal_elb),
-    #         )],
-    #         Role=ts.Ref(self.ecs_service_role),
-    #         TaskDefinition=ts.Ref(self.ecs_task_def),
-    #         # allow ecs to stop and replace tasks
-    #         # port usage prevents replacement otherwise
-    #         DeploymentConfiguration=ts.ecs.DeploymentConfiguration(
-    #             MaximumPercent=100,
-    #             MinimumHealthyPercent=50,
-    #         ),
-    #     )
-
-    @resource
-    def external_ecs_service(self):
-        return ts.ecs.Service(
-            self._get_logical_id('ExtEcsService'),
-            ServiceName=self.external_service_name,
-            Cluster=ts.Ref(self.ecs_cluster),
-            DesiredCount=2,
-            LoadBalancers=[ts.ecs.LoadBalancer(
-                ContainerName='nginx',
-                ContainerPort=8080,
-                TargetGroupArn=ts.Ref(self.external_elb_target_group),
-            )],
-            Role=ts.Ref(self.ecs_service_role),
-            TaskDefinition=ts.Ref(self.ecs_task_def),
-            # allow ecs to stop and replace tasks
-            # port usage prevents replacement otherwise
-            DeploymentConfiguration=ts.ecs.DeploymentConfiguration(
-                MaximumPercent=100,
-                MinimumHealthyPercent=50,
-            ),
-            DependsOn=[self.external_elb_listener.title],
-        )
-
-    @resource
-    def ecs_service_role(self):
-        return ts.iam.Role(
-            self._get_logical_id('ServiceRole'),
-            AssumeRolePolicyDocument=awacs.aws.Policy(
-                Statement=[awacs.helpers.trust.make_simple_assume_statement('ecs.amazonaws.com')],
-            ),
-            Path='/',
-            Policies=[ts.iam.Policy(
-                PolicyName='dwh-nudge-web',
-                PolicyDocument=awacs.aws.Policy(
-                    Statement=[awacs.aws.Statement(
-                        Effect='Allow',
-                        Action=[
-                            awacs.elasticloadbalancing.Action('Describe*'),
-                            awacs.elasticloadbalancing.RegisterTargets,
-                            awacs.elasticloadbalancing.DeregisterTargets,
-                            awacs.elasticloadbalancing.DeregisterInstancesFromLoadBalancer,
-                            awacs.elasticloadbalancing.RegisterInstancesWithLoadBalancer,
-                            awacs.ec2.Action('Describe*'),
-                            awacs.ec2.AuthorizeSecurityGroupIngress,
-                        ],
-                        Resource=['*'],
-                    )],
-                ),
-            )],
-        )
-
     @resource
     def security_group(self):
         return ts.ec2.SecurityGroup(
@@ -378,8 +241,8 @@ class WebResources(ResourceGroup):
                     CidrIp=ip,
                 )
                 for lower, upper in [
-                    (32768, 61000),  # ephemeral ports
-                    (80, 8080),      # api
+                    (32768, 61000),  # ephemeral nginx ports
+                    (8080, 8080),
                     (22, 22),        # ssh
                 ]
                 for ip in itertools.chain(
@@ -388,8 +251,6 @@ class WebResources(ResourceGroup):
                 )
             ],
         )
-
-    # ec2 instance autoscaling
 
     @cached_property
     def launch_config_logical_id(self):
@@ -400,7 +261,7 @@ class WebResources(ResourceGroup):
         return self._get_logical_id('AutoScalingGroup')
 
     @resource
-    def ec2_auto_scaling_group(self):
+    def ec2_autoscaling_group(self):
         return ts.autoscaling.AutoScalingGroup(
             self.auto_scaling_group_logical_id,
             LaunchConfigurationName=ts.Ref(self.ec2_launch_config),
@@ -408,16 +269,15 @@ class WebResources(ResourceGroup):
             AvailabilityZones=self.zones,
             MinSize=1,
             MaxSize=5,
-            HealthCheckType='ELB',
+            HealthCheckType='EC2',
             HealthCheckGracePeriod=900,
-            TargetGroupARNs=[ts.Ref(self.external_elb_target_group)],
+            TargetGroupARNs=[
+                ts.Ref(self.external.target_group),
+                ts.Ref(self.internal.target_group),
+            ],
             # don't launch service until config is uploaded
             # DependsOn=self.env.secrets.wait_condition.title,
         )
-
-    @resource_group
-    def ec2_scaling(self):
-        return
 
     @resource
     def ec2_launch_config(self):
@@ -507,28 +367,275 @@ class WebResources(ResourceGroup):
             '\n',
         ]))
 
+    # @resource
+    # def scale_up_policy(self):
+    #     return ts.autoscaling.ScalingPolicy(
+    #         self._get_logical_id('ScaleUpPolicy'),
+    #         AdjustmentType='ChangeInCapacity',
+    #         AutoscalingGroupName=ts.Ref(self.ec2_autoscaling_group),
+    #         Cooldown=60,
+    #         ScalingAdjustment=1,
+    #     )
+    #
+    # @resource
+    # def cpu_alarm_high(self):
+    #     return ts.cloudwatch.Alarm(
+    #         self._get_logical_id('CPUAlarmHigh'),
+    #         AlarmDescription='Scale up if CPU > 90% for 10 minutes',
+    #         MetricName='CPUUtilization',
+    #         Namespace='AWS/EC2',
+    #         Statistic='Average',
+    #         Period=300,
+    #         EvaluationThreshold=2,
+    #         Threshold=90,
+    #         AlarmActions=[ts.Ref(self.scale_up_policy)],
+    #         Dimensions=[ts.cloudwatch.MetricDimension(
+    #             Name='AutoScalingGroupName',
+    #             Value=ts.Ref(self.ec2_autoscaling_group),
+    #         )],
+    #         ComparisonOperator='GreaterThanThreshold',
+    #     )
+    #
+    # @resource
+    # def scale_down_policy(self):
+    #     return ts.autoscaling.ScalingPolicy(
+    #         self._get_logical_id('ScaleDownPolicy'),
+    #         AdjustmentType='ChangeInCapacity',
+    #         AutoscalingGroupName=ts.Ref(self.ec2_autoscaling_group),
+    #         Cooldown=60,
+    #         ScalingAdjustment=-1,
+    #     )
+    #
+    # @resource
+    # def cpu_alarm_low(self):
+    #     return ts.cloudwatch.Alarm(
+    #         self._get_logical_id('CPUAlarmLow'),
+    #         AlarmDescription='Scale down if CPU < 90% for 10 minutes',
+    #         MetricName='CPUUtilization',
+    #         Namespace='AWS/EC2',
+    #         Statistic='Average',
+    #         Period=300,
+    #         EvaluationThreshold=2,
+    #         Threshold=70,
+    #         AlarmActions=[ts.Ref(self.scale_down_policy)],
+    #         Dimensions=[ts.cloudwatch.MetricDimension(
+    #             Name='AutoScalingGroupName',
+    #             Value=ts.Ref(self.ec2_autoscaling_group),
+    #         )],
+    #         ComparisonOperator='LessThanThreshold',
+    #     )
+
+    # service
+
+    @parameter
+    def app_image(self):
+        return ts.Parameter(
+            self._get_logical_id('AppImage'),
+            Type='String',
+        )
+
+    @app_image.value
+    def app_image_value(self):
+        return nudge.manager.util.get_latest_image_tag(self.app_repo_uri)
+
+    @cached_property
+    def app_container_def(self):
+        return ts.ecs.ContainerDefinition(
+            Name='app',
+            Image=ts.Ref(self.app_image),
+            Cpu=64,
+            Memory=256,
+            # PortMappings=[ts.ecs.PortMapping(
+            #     # todo: move to config file
+            #     HostPort=9091,
+            #     ContainerPort=9091,
+            # )],
+            LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name),
+            Environment=nudge.manager.util.env(
+                # todo: get from load location
+                S3_CONFIG_URI=self.s3_config_uri,
+            ),
+        )
+
+    @parameter
+    def nginx_image(self):
+        return ts.Parameter(
+            self._get_logical_id('NginxImage'),
+            Type='String',
+        )
+
+    @nginx_image.value
+    def nginx_version_value(self):
+        return nudge.manager.util.get_latest_image_tag(self.nginx_repo_uri)
+
+    @cached_property
+    def nginx_container_def(self):
+        return ts.ecs.ContainerDefinition(
+            Name='nginx',
+            Image=ts.Ref(self.nginx_image),
+            Cpu=64,
+            Memory=256,
+            PortMappings=[ts.ecs.PortMapping(
+                # todo: move to config file
+                HostPort=0,  # dynamically generated
+                ContainerPort=8080,
+            )],
+            LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name),
+            VolumesFrom=[ts.ecs.VolumesFrom(SourceContainer=self.app_container_def.Name)],
+        )
+
     @resource
-    def external_record_set_group(self):
+    def task_def(self):
+        return ts.ecs.TaskDefinition(
+            self._get_logical_id('TaskDefinition'),
+            ContainerDefinitions=[
+                self.nginx_container_def,
+                self.app_container_def,
+            ],
+        )
+
+
+    @resource
+    def service_role(self):
+        return ts.iam.Role(
+            self._get_logical_id('ServiceRole'),
+            AssumeRolePolicyDocument=awacs.aws.Policy(
+                Statement=[awacs.helpers.trust.make_simple_assume_statement('ecs.amazonaws.com')],
+            ),
+            Path='/',
+            Policies=[ts.iam.Policy(
+                PolicyName='nudge-web',
+                PolicyDocument=awacs.aws.Policy(
+                    Statement=[awacs.aws.Statement(
+                        Effect='Allow',
+                        Action=[
+                            awacs.elasticloadbalancing.Action('Describe*'),
+                            awacs.elasticloadbalancing.RegisterTargets,
+                            awacs.elasticloadbalancing.DeregisterTargets,
+                            awacs.elasticloadbalancing.DeregisterInstancesFromLoadBalancer,
+                            awacs.elasticloadbalancing.RegisterInstancesWithLoadBalancer,
+                            awacs.ec2.Action('Describe*'),
+                            awacs.ec2.AuthorizeSecurityGroupIngress,
+                        ],
+                        Resource=['*'],
+                    )],
+                ),
+            )],
+        )
+
+    @resource_group
+    def internal(self):
+        return WebService(
+            ctx=self._ctx,
+            config=self.config['Internal'],
+            env=self.env,
+            prefix='{}{}'.format(self._prefix, 'Int'),
+            authorized_ips=['10.0.0.0/8', '172.16.0.0/12'],  # addresses inside vpc
+            service_role=self.service_role,
+            task_def=self.task_def,
+            cluster=self.ecs_cluster,
+            internal=True,
+        )
+
+    @resource_group
+    def external(self):
+        return WebService(
+            ctx=self._ctx,
+            config=self.config['External'],
+            env=self.env,
+            prefix='{}{}'.format(self._prefix, 'Ext'),
+            authorized_ips=self.authorized_ips,
+            service_role=self.service_role,
+            task_def=self.task_def,
+            cluster=self.ecs_cluster,
+            internal=False,
+        )
+
+
+class WebService(ResourceGroup):
+
+    @cached_property
+    def vpc_id(self):
+        return self.env.vpc_id
+
+    @cached_property
+    def elb_name(self):
+        return self.config['ElbName']
+
+    @cached_property
+    def subnets(self):
+        return self.env.subnets
+
+    @cached_property
+    def hosted_zone_name(self):
+        return self.env.web.hosted_zone_name
+
+    @cached_property
+    def target_group_name(self):
+        return self.config['TargetGroupName']
+
+    @cached_property
+    def record_set_name(self):
+        return self.config['RecordSetName']
+
+    @cached_property
+    def service_name(self):
+        return self.config['ServiceName']
+
+    @cached_property
+    def elb_scheme(self):
+        return 'internal' if self.is_internal else 'internet-facing'
+
+    def __init__(self, ctx, config, env, prefix, authorized_ips, service_role, task_def, cluster, internal=False):
+        super().__init__(ctx, config, prefix=prefix)
+        self.env = env
+        self.is_internal = internal
+        self.authorized_ips = authorized_ips
+        self.service_role = service_role
+        self.task_def = task_def
+        self.cluster = cluster
+
+    @resource
+    def record_set_group(self):
         return ts.route53.RecordSetGroup(
-            self._get_logical_id('ExternalRecordSetGroup'),
+            self._get_logical_id('RecordSetGroup'),
             HostedZoneName=self.hosted_zone_name,
             RecordSets=[ts.route53.RecordSet(
-                Name=self.config['External']['RecordSetName'],
+                Name=self.record_set_name,
                 Type='A',
                 AliasTarget=ts.route53.AliasTarget(
                     EvaluateTargetHealth=False,
-                    DNSName=ts.GetAtt(self.external_elb, 'DNSName'),
-                    HostedZoneId=ts.GetAtt(self.external_elb, 'CanonicalHostedZoneID'),
+                    DNSName=ts.GetAtt(self.elb, 'DNSName'),
+                    HostedZoneId=ts.GetAtt(self.elb, 'CanonicalHostedZoneID'),
                 ),
             )],
         )
 
     @resource
-    def external_elb(self):
+    def security_group(self):
+        return ts.ec2.SecurityGroup(
+            self._get_logical_id('SecurityGroup'),
+            GroupDescription='Nudge Web {type} Elastic Load Balancing Security Group'.format(
+                type='Internal' if self.is_internal else 'External',
+            ),
+            VpcId=self.vpc_id,
+            SecurityGroupIngress=[
+                ts.ec2.SecurityGroupRule(
+                    IpProtocol='tcp',
+                    FromPort=80,
+                    ToPort=80,
+                    CidrIp=ip,
+                )
+                for ip in self.authorized_ips
+            ],
+        )
+
+    @resource
+    def elb(self):
         return ts.elasticloadbalancingv2.LoadBalancer(
-            self._get_logical_id('ExtElb'),
-            Name=self.external_elb_name,
-            Scheme='internet-facing',
+            self._get_logical_id('Elb'),
+            Name=self.elb_name,
+            Scheme=self.elb_scheme,
             Subnets=self.subnets,
             SecurityGroups=[ts.Ref(self.security_group)],
             # LoadBalancerAttributes=[
@@ -541,14 +648,15 @@ class WebResources(ResourceGroup):
         )
 
     @resource
-    def external_elb_target_group(self):
+    def target_group(self):
         return ts.elasticloadbalancingv2.TargetGroup(
-            self._get_logical_id('ExtElbTargetGroup'),
-            Name=self.external_target_group_name,
+            self._get_logical_id('TargetGroup'),
+            Name=self.target_group_name,
             HealthCheckIntervalSeconds=30,
             HealthCheckProtocol='HTTP',
             HealthCheckTimeoutSeconds=10,
             HealthyThresholdCount=4,
+            # todo: point to definiiton
             HealthCheckPath='/api/1/call/CheckHealth/',
             Port=8080,
             Protocol='HTTP',
@@ -557,79 +665,93 @@ class WebResources(ResourceGroup):
         )
 
     @resource
-    def external_elb_listener(self):
+    def listener(self):
         return ts.elasticloadbalancingv2.Listener(
-            self._get_logical_id('ExtElbListener'),
+            self._get_logical_id('Listener'),
             Protocol='HTTP',
             Port=80,
-            LoadBalancerArn=ts.Ref(self.external_elb),
+            LoadBalancerArn=ts.Ref(self.elb),
             DefaultActions=[ts.elasticloadbalancingv2.Action(
                 Type='forward',
-                TargetGroupArn=ts.Ref(self.external_elb_target_group),
-            )]
-        )
-
-
-class Scaling(ResourceGroup):
-
-    def __init__(self, prefix, autoscaling_group):
-        super().__init__({}, prefix=prefix)
-        self.autoscaling_group = autoscaling_group
-
-    @resource
-    def scale_up_policy(self):
-        return ts.autoscaling.ScalingPolicy(
-            self._get_logical_id('ScaleUpPolicy'),
-            AdjustmentType='ChangeInCapacity',
-            AutoscalingGroupName=ts.Ref(self.autoscaling_group),
-            Cooldown=60,
-            ScalingAdjustment=1,
-        )
-
-    @resource
-    def cpu_alarm_high(self):
-        return ts.cloudwatch.Alarm(
-            self._get_logical_id('CPUAlarmHigh'),
-            AlarmDescription='Scale up if CPU > 90% for 10 minutes',
-            MetricName='CPUUtilization',
-            Namespace='AWS/EC2',
-            Statistic='Average',
-            Period=300,
-            EvaluationThreshold=2,
-            Threshold=90,
-            AlarmActions=[ts.Ref(self.scale_up_policy)],
-            Dimensions=[ts.cloudwatch.MetricDimension(
-                Name='AutoScalingGroupName',
-                Value=ts.Ref(self.autoscaling_group),
+                TargetGroupArn=ts.Ref(self.target_group),
             )],
-            ComparisonOperator='GreaterThanThreshold',
         )
 
     @resource
-    def scale_down_policy(self):
-        return ts.autoscaling.ScalingPolicy(
-            self._get_logical_id('ScaleDownPolicy'),
-            AdjustmentType='ChangeInCapacity',
-            AutoscalingGroupName=ts.Ref(self.autoscaling_group),
-            Cooldown=60,
-            ScalingAdjustment=-1,
-        )
-
-    @resource
-    def cpu_alarm_low(self):
-        return ts.cloudwatch.Alarm(
-            self._get_logical_id('CPUAlarmLow'),
-            AlarmDescription='Scale down if CPU < 90% for 10 minutes',
-            MetricName='CPUUtilization',
-            Namespace='AWS/EC2',
-            Statistic='Average',
-            Period=300,
-            EvaluationThreshold=2,
-            Threshold=70,
-            AlarmActions=[ts.Ref(self.scale_down_policy)],
-            Dimensions=[ts.cloudwatch.MetricDimension(
-                Name='AutoScalingGroupName',
-                Value=ts.Ref(self.autoscaling_group),
+    def service(self):
+        return ts.ecs.Service(
+            self._get_logical_id('Service'),
+            ServiceName=self.service_name,
+            Cluster=ts.Ref(self.cluster),
+            DesiredCount=2,
+            LoadBalancers=[ts.ecs.LoadBalancer(
+                # todo: point at definition
+                ContainerName='nginx',
+                ContainerPort=8080,
+                TargetGroupArn=ts.Ref(self.target_group),
             )],
-            ComparisonOperator='LessThanThreshold',
+            Role=ts.Ref(self.service_role),
+            TaskDefinition=ts.Ref(self.task_def),
+            DeploymentConfiguration=ts.ecs.DeploymentConfiguration(
+                MaximumPercent=200,
+                MinimumHealthyPercent=100,
+            ),
+            DependsOn=[self.listener.title],
         )
+
+    # @resource
+    # def autoscaling_role(self):
+    #     return ts.iam.Role(
+    #         self._get_logical_id('AutoscalingRole'),
+    #         AssumeRolePolicyDocument=awacs.aws.Policy(
+    #             Statement=[awacs.helpers.trust.make_simple_assume_statement('application-autoscaling.amazonaws.com')],
+    #         ),
+    #         Path='/',
+    #         Policies=[ts.iam.Policy(
+    #             PolicyName='service-autoscaling',
+    #             PolicyDocument=awacs.aws.Policy(
+    #                 Statement=[awacs.aws.Statement(
+    #                     Effect='Allow',
+    #                     Action=[
+    #                         awacs.application_autoscaling.Action('*'),
+    #                         awacs.cloudwatch.DescribeAlarms,
+    #                         awacs.cloudwatch.PutMetricAlarm,
+    #                         awacs.ecs.DescribeServices,
+    #                         awacs.ecs.UpdateService,
+    #                     ],
+    #                     Resource=['*'],
+    #                 )],
+    #             ),
+    #         )],
+    #     )
+    #
+    # @resource
+    # def scaling_target(self):
+    #     return ts.applicationautoscaling.ScalableTarget(
+    #         self._get_logical_id('ScalingTarget'),
+    #         DependsOn=[self.service.title],
+    #         MaxCapacity=2,
+    #         MinCapacity=1,
+    #         ResourceId=ts.Join('', ['service/', ts.Ref(self.cluster), '/', ts.GetAtt(self.service, 'Name')]),
+    #         RoleARN=ts.GetAtt(self.autoscaling_role, 'Arn'),
+    #         ScalableDimension='ecs:service:DesiredCount',
+    #         ServiceNamespace='ecs',
+    #     )
+    #
+    # @resource
+    # def scaling_policy(self):
+    #     return ts.applicationautoscaling.ScalingPolicy(
+    #         self._get_logical_id('ScalingPolicy'),
+    #         PolicyName='nudge-scaling-policy',
+    #         PolicyType='StepScaling',
+    #         ScalingTargetId=ts.Ref(self.scaling_target),
+    #         StepScalingPolicyConfiguration=ts.applicationautoscaling.StepScalingPolicyConfiguration(
+    #             AdjustmentType='PercentChangeInCapacity',
+    #             Cooldown=60,
+    #             MetricAggregationType='Average',
+    #             StepAdjustments=[ts.applicationautoscaling.StepAdjustment(
+    #                 MetricIntervalLowerBound=0,
+    #                 ScalingAdjustment=200,
+    #             )],
+    #         ),
+    #     )

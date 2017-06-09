@@ -19,7 +19,7 @@ class NudgeClient:
             'Prefix': Prefix,
             'Endpoint': Endpoint,
             'Regex': Regex,
-            'Threshold': Threshold
+            'Threshold': Threshold,
         }
         return self._post_json('Subscribe', data)
 
@@ -31,7 +31,7 @@ class NudgeClient:
 
     def consume(self, ElementIds):
         data = {
-            'ElementIds': ElementIds
+            'ElementIds': ElementIds,
         }
         return self._post_json('Consume', data)
 
@@ -40,9 +40,11 @@ class NudgeClient:
             'Bucket': Bucket,
             'Key': Key,
             'Size': Size,
-            'Created': Created
+            'Created': Created,
         }
         return self._post_json('HandleObjectCreated', data)
 
     def _post_json(self, endpoint, data):
-        return requests.post(self._base_url.format(endpoint=endpoint), json=data)
+        r = requests.post(self._base_url.format(endpoint=endpoint), json=data)
+        if r.status_code != 200:
+            raise Exception('Nudge call {} failed with code {}'.format(endpoint, r.status_code))

@@ -71,7 +71,7 @@ class Subscribe(rv.Function):
         self._db.add(sub)
 
         if backfill:
-            sub.state = Subscription.State.Backfilling
+            sub.state = Subscription.State.BACKFILLING
             self._db.flush()
             self._deferral.send_call(self._ctx.backfill, sub.id)
 

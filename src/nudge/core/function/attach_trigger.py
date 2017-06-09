@@ -45,7 +45,7 @@ class AttachTrigger(rv.Function):
         self._log.info('Handling call: AttachTrigger')
 
         sub = self._sub_srv.get_subscription(sub_id)
-        assert sub.state == Subscription.State.Active
+        assert sub.state == Subscription.State.ACTIVE
 
         assert sub.trigger is None
         sub.trigger = trigger

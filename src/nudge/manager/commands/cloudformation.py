@@ -26,6 +26,8 @@ def build_template(ctx):
 
 
 def create_stack(ctx):
+    _upload_template_s3(ctx)
+
     cf_client.create_stack(
         OnFailure='DELETE',
         **_get_stack_call_params(ctx, True),
@@ -35,10 +37,20 @@ def create_stack(ctx):
 
 
 def update_stack(ctx, change_set):
+    _upload_template_s3(ctx)
+
     if change_set:
         _change_set_update(ctx)
     else:
         _blind_update(ctx)
+
+
+def _upload_template_s3(ctx):
+    s3_client.put_object(
+        Bucket=ctx.revolio_config['Bucket'],
+        Body=ctx.stack_template,
+        Key=ctx.template_key,
+    )
 
 
 def _blind_update(ctx):
@@ -75,7 +87,10 @@ def _change_set_update(ctx):
 def _get_stack_call_params(ctx, initial):
     return dict(
         StackName=ctx.stack_name,
-        TemplateBody=ctx.stack_template,
+        TemplateURL='https://s3.amazonaws.com/{b}/{k}'.format(
+            b=ctx.revolio_config['Bucket'],
+            k=ctx.template_key,
+        ),
         Parameters=[
             {
                 'ParameterKey': k,

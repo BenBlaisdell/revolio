@@ -114,9 +114,9 @@ class Subscription(rv.Entity):
         return self._orm.id
 
     class State(enum.Enum):
-        Backfilling = 'Backfilling'
-        Active = 'Active'
-        Inactive = 'Inactive'
+        BACKFILLING = 'BACKFILLING'
+        ACTIVE = 'ACTIVE'
+        INACTIVE = 'INACTIVE'
 
     @property
     def state(self):
@@ -159,7 +159,7 @@ class Subscription(rv.Entity):
     def create(bucket, *, prefix=None, regex=None, trigger=None):
         return Subscription(SubscriptionOrm(
             id=str(uuid.uuid4()),
-            state=Subscription.State.Active.value,
+            state=Subscription.State.ACTIVE.value,
             bucket=bucket,
             prefix=prefix,
             data=dict(
@@ -219,16 +219,17 @@ class SubscriptionService:
         return sub
 
     def find_matching_subscriptions(self, bucket, key):
-        subs = [
-            Subscription(orm)
-            for orm in self._db
-                .query(SubscriptionOrm)
-                .filter(SubscriptionOrm.bucket == bucket)
-                .filter(sa.sql.expression.bindparam('k', key).startswith(SubscriptionOrm.prefix))
-                .all()
-        ]
+        query = self._db \
+            .query(SubscriptionOrm) \
+            .filter(SubscriptionOrm.bucket == bucket)
 
+        # escape prefix to prevent '_' or '%' from matching characters
+        query = query \
+            .filter(sa.sql.expression.bindparam('k', key).startswith(SubscriptionOrm.prefix, autoescape='/'))
+
+        subs = [Subscription(orm) for orm in query.all()]
         subs = filter(lambda s: s.matches(bucket, key), subs)
+
         self._log.debug('Found subscriptions matching bucket="{b}" key="{k}": {s}'.format(
             b=bucket,
             k=key,
@@ -238,7 +239,10 @@ class SubscriptionService:
         return subs
 
     def evaluate(self, sub):
-        elems = self._elem_srv.get_sub_elems(sub.id, state=Element.State.Unconsumed)
+        if sub.trigger is None:
+            return
+
+        elems = self._elem_srv.get_sub_elems(sub.id, state=Element.State.AVAILABLE)
         if _batch_size(elems) >= sub.trigger.threshold:
             return self._create_and_send_batch(sub, elems)
 
@@ -249,11 +253,14 @@ class SubscriptionService:
 
         for elem in elems:
             assert elem.sub_id == sub.id
-            assert elem.state == Element.State.Unconsumed
-            elem.state = Element.State.Batched
+            assert elem.state == Element.State.AVAILABLE
+            elem.state = Element.State.BATCHED
             elem.batch_id = batch.id
 
         self._db.flush()
+
+        if sub.trigger.endpoint is None:
+            return
 
         sub.trigger.endpoint.send_message(
             ctx=self._ctx,

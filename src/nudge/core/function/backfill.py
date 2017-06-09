@@ -48,7 +48,7 @@ class Backfill(rv.Function):
         self._log.info('Handling call: Backfill')
 
         sub = self._sub_srv.get_subscription(sub_id)
-        assert sub.state == Subscription.State.Backfilling
+        assert sub.state == Subscription.State.BACKFILLING
 
         r = self._s3.list_objects_v2(
             Bucket=sub.bucket,
@@ -77,7 +77,7 @@ class Backfill(rv.Function):
         ]
 
         if backfill_complete:
-            sub.state = Subscription.State.Active
+            sub.state = Subscription.State.ACTIVE
 
         self._db.commit()
 

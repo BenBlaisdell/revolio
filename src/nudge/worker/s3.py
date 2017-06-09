@@ -40,13 +40,28 @@ class S3EventsWorker(rv.SqsWorker):
         )
 
     def _handle_message(self, msg):
+        if msg['Event'] == 's3:TestEvent':
+            _logger.info('Received test event message for bucket {}'.format(msg['Bucket']))
+            return
+
         for record in json.loads(msg['Body']).get('Records', []):
             if 'ObjectCreated' in record['eventName']:
+
+                bucket = record['s3']['bucket']['name']
+                key = record['s3']['object']['key']
+                size = record['s3']['object']['size']
+                created = record['eventTime']
+
+                _logger.info('\r'.join(['Sending S3 object s3://{b}/{k}'.format(
+                    b=bucket,
+                    k=key,
+                )]))
+
                 self._nudge_client.handle_object_created(
-                    Bucket=record['s3']['bucket']['name'],
-                    Key=record['s3']['object']['key'],
-                    Size=record['s3']['object']['size'],
-                    Created=record['eventTime']
+                    Bucket=bucket,
+                    Key=key,
+                    Size=size,
+                    Created=created,
                 )
 
 

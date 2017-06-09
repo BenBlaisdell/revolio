@@ -26,7 +26,7 @@ _logger.addHandler(ch)
 
 class DeferralWorker(rv.SqsWorker):
 
-    env_var_prefix = 'NDG_WRK_DEF'
+    ENV_VAR_PREFIX = 'NDG_WRK_DEF'
 
     def __init__(self):
         super(DeferralWorker, self).__init__(_logger)

@@ -7,7 +7,9 @@ import awacs.helpers.trust
 import awacs.logs
 import awacs.sqs
 from cached_property import cached_property
-from revolio import resource, parameter, ResourceGroup
+
+from nudge.worker.s3 import S3EventsWorker
+from revolio import resource, parameter, ResourceGroup, SqsWorker
 import troposphere as ts
 import troposphere.autoscaling
 import troposphere.cloudformation
@@ -90,18 +92,20 @@ class S3EventsWorkerResources(ResourceGroup):
         return ts.ecs.TaskDefinition(
             self._get_logical_id('TaskDefinition'),
             ContainerDefinitions=[ts.ecs.ContainerDefinition(
-                    Name='s3e',
-                    Image=ts.Ref(self.image),
-                    Cpu=64,
-                    Memory=256,
-                    LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name),
-                    Environment=nudge.manager.util.env(
-                        # todo: get from load location
-                        NDG_WRK_S3E_HOST=self.config['Env']['NudgeHost'],
-                        NDG_WRK_S3E_PORT=self.config['Env']['NudgePort'],
-                        NDG_WRK_S3E_VERSION=self.config['Env']['NudgeVersion'],
-                        NDG_WRK_S3E_QUEUE_URL=self.config['Env']['QueueUrl'],
-                    ),
+                Name='s3e',
+                Image=ts.Ref(self.image),
+                Cpu=64,
+                Memory=256,
+                LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name),
+                Environment=nudge.manager.util.env(
+                    prefix=S3EventsWorker.ENV_VAR_PREFIX,
+                    variables={
+                        SqsWorker.QUEUE_URL_VAR: self.config['Env']['QueueUrl'],
+                        S3EventsWorker.HOST_VAR: self.config['Env']['NudgeHost'],
+                        S3EventsWorker.PORT_VAR: self.config['Env']['NudgePort'],
+                        S3EventsWorker.VERSION_VAR: self.config['Env']['NudgeVersion'],
+                    },
+                ),
             )],
         )
 

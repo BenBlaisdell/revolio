@@ -48,20 +48,22 @@ def _handler(logger, signal_received, signum, frame):
 
 class SqsWorker(Worker):
 
+    QUEUE_URL_VAR = 'QUEUE_URL'
+
     @property
     @abc.abstractmethod
-    def env_var_prefix(self):
+    def ENV_VAR_PREFIX(self):
         return 'REVOLIO'
 
     def get_env_var_name(self, key):
-        return '{}_{}'.format(self.env_var_prefix, key)
+        return '{}_{}'.format(self.ENV_VAR_PREFIX, key)
 
     def get_env_var(self, key):
         return json.loads(os.environ[self.get_env_var_name(key)])
 
     @cached_property
     def _queue_url(self):
-        return self.get_env_var('QUEUE_URL')
+        return self.get_env_var(SqsWorker.QUEUE_URL_VAR)
 
     @cached_property
     def _queue_region(self):

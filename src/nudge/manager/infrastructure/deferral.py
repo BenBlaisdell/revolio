@@ -7,14 +7,14 @@ import awacs.helpers.trust
 import awacs.logs
 import awacs.sqs
 from cached_property import cached_property
-from revolio import resource, parameter, ResourceGroup
+
+from nudge.worker.deferral import DeferralWorker
+from revolio import resource, parameter, ResourceGroup, SqsWorker
 import troposphere as ts
 import troposphere.autoscaling
 import troposphere.cloudformation
 import troposphere.ec2
 import troposphere.ecs
-import troposphere.iam
-import troposphere.logs
 import troposphere.sqs
 
 import nudge.manager.util
@@ -73,8 +73,10 @@ class DeferralWorkerResources(ResourceGroup):
                     Memory=256,
                     LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name),
                     Environment=nudge.manager.util.env(
-                        # todo: get from load location
-                        NDG_WRK_DEF_QUEUE_URL=self.config['Env']['QueueUrl'],
+                        prefix=DeferralWorker.ENV_VAR_PREFIX,
+                        variables={
+                             SqsWorker.QUEUE_URL_VAR: self.config['Env']['QueueUrl'],
+                        }
                     ),
             )],
         )

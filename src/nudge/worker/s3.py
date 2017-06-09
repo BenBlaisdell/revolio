@@ -26,7 +26,11 @@ _logger.addHandler(ch)
 
 class S3EventsWorker(rv.SqsWorker):
 
-    env_var_prefix = 'NDG_WRK_S3E'
+    ENV_VAR_PREFIX = 'NDG_WRK_S3E'
+
+    HOST_VAR = 'HOST'
+    PORT_VAR = 'PORT'
+    VERSION_VAR = 'VERSION'
 
     def __init__(self):
         super(S3EventsWorker, self).__init__(_logger)
@@ -34,9 +38,9 @@ class S3EventsWorker(rv.SqsWorker):
     @cached_property
     def _nudge_client(self):
         return NudgeClient(
-            self.get_env_var('HOST'),
-            port=self.get_env_var('PORT'),
-            api_version=self.get_env_var('VERSION'),
+            self.get_env_var(S3EventsWorker.HOST_VAR),
+            port=self.get_env_var(S3EventsWorker.PORT_VAR),
+            api_version=self.get_env_var(S3EventsWorker.VERSION_VAR),
         )
 
     def _handle_message(self, msg):

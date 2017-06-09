@@ -223,9 +223,10 @@ class SubscriptionService:
             .query(SubscriptionOrm) \
             .filter(SubscriptionOrm.bucket == bucket)
 
-        # escape prefix to prevent '_' or '%' from matching characters
+        # escape to prevent '_' or '%' from matching characters
+        k = sa.sql.expression.bindparam('k', key)
         query = query \
-            .filter(sa.sql.expression.bindparam('k', key).startswith(SubscriptionOrm.prefix, autoescape='/'))
+            .filter(k.startswith(SubscriptionOrm.prefix, autoescape='/'))
 
         subs = [Subscription(orm) for orm in query.all()]
         subs = filter(lambda s: s.matches(bucket, key), subs)

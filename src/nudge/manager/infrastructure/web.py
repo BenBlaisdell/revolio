@@ -445,11 +445,6 @@ class WebResources(ResourceGroup):
             Image=ts.Ref(self.app_image),
             Cpu=64,
             Memory=256,
-            # PortMappings=[ts.ecs.PortMapping(
-            #     # todo: move to config file
-            #     HostPort=9091,
-            #     ContainerPort=9091,
-            # )],
             LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name),
             Environment=nudge.manager.util.env(
                 # todo: get from load location

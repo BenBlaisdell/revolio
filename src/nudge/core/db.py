@@ -46,6 +46,7 @@ class Database:
             table.drop(bind=self._engine)
 
     def add(self, entity):
+        self._log.info('Creating entity {}'.format(entity))
         self._session.add(entity.orm)
         return entity
 

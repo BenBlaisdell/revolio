@@ -44,11 +44,11 @@ class S3EventsWorker(rv.SqsWorker):
         )
 
     def _handle_message(self, msg):
-        if msg['Event'] == 's3:TestEvent':
-            _logger.info('Received test event message for bucket {}'.format(msg['Bucket']))
-            return
+        # if msg['Event'] == 's3:TestEvent':
+        #     _logger.info('Received test event message for bucket {}'.format(msg['Bucket']))
+        #     return
 
-        for record in json.loads(msg['Body']).get('Records', []):
+        for record in msg.get('Records', []):
             if 'ObjectCreated' in record['eventName']:
 
                 bucket = record['s3']['bucket']['name']

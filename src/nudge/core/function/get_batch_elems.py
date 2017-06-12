@@ -22,8 +22,6 @@ class GetBatchElements(rv.Function):
         }
 
     def handle_request(self, request):
-        self._log.info('Handling request: GetBatchElements')
-
         sub_id = request['SubscriptionId']
         assert isinstance(sub_id, str)
 
@@ -61,7 +59,6 @@ class GetBatchElements(rv.Function):
         }
 
     def __call__(self, sub_id, batch_id, *, offset=0, limit=None):
-        self._log.info('Handling call: GetBatchElements')
         elems = self._elem_srv.get_batch_elems(
             sub_id=sub_id,
             batch_id=batch_id,

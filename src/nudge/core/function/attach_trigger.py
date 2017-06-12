@@ -18,10 +18,6 @@ class AttachTrigger(rv.Function):
         }
 
     def handle_request(self, request):
-        self._log.info('Handling request: AttachTrigger')
-
-        # parse parameters
-
         sub_id = request['SubscriptionId']
         assert isinstance(sub_id, str)
 
@@ -30,7 +26,7 @@ class AttachTrigger(rv.Function):
 
         # make call
 
-        triggered = self(
+        batch = self(
             sub_id=sub_id,
             trigger=trigger,
         )
@@ -38,20 +34,20 @@ class AttachTrigger(rv.Function):
         # format response
 
         return {
-            'Triggered': triggered,
+            'BatchId': batch.id if (batch is not None) else None,
         }
 
     def __call__(self, sub_id, trigger):
-        self._log.info('Handling call: AttachTrigger')
-
         sub = self._sub_srv.get_subscription(sub_id)
-        assert sub.state == Subscription.State.ACTIVE
+        self._sub_srv.assert_active(sub)
 
-        assert sub.trigger is None
+        if sub.trigger is not None:
+            raise Exception('Subscription already has a trigger')
+
         sub.trigger = trigger
 
-        triggered = self._sub_srv.evaluate(sub)
+        batch = self._sub_srv.evaluate(sub)
 
         self._db.commit()
 
-        return triggered
+        return batch

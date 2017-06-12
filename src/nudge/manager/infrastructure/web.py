@@ -692,7 +692,7 @@ class WebService(ResourceGroup):
             TaskDefinition=ts.Ref(self.task_def),
             DeploymentConfiguration=ts.ecs.DeploymentConfiguration(
                 MaximumPercent=200,
-                MinimumHealthyPercent=100,
+                MinimumHealthyPercent=50,
             ),
             DependsOn=[self.listener.title],
         )

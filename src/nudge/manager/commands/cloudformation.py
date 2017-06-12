@@ -138,7 +138,7 @@ def _log_stack_status(ctx, *, prev_event=None):
 
 def _stack_is_stable(stack_name):
     status = cf_client.describe_stacks(StackName=stack_name)['Stacks'][0]['StackStatus']
-    return status in ['UPDATE_COMPLETE', 'ROLLBACK_COMPLETE']
+    return status in ['UPDATE_COMPLETE', 'ROLLBACK_COMPLETE', 'UPDATE_ROLLBACK_COMPLETE']
 
 
 def _get_new_events(stack_name, *, prev_event=None):

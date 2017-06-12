@@ -97,7 +97,7 @@ def aws_logs_config(group, *, region='us-east-1'):
 def env(prefix, variables):
     return [
         ts.ecs.Environment(
-            Name='{}{}'.format(prefix, n),
+            Name='{}_{}'.format(prefix, n),
             Value=json.dumps(v),
         )
         for n, v in variables.items()

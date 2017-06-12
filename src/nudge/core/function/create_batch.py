@@ -8,8 +8,9 @@ from nudge.core.entity.subscription import Subscription
 
 class CreateBatch(rv.Function):
 
-    def __init__(self, ctx, elem_srv, log, db):
+    def __init__(self, ctx, sub_srv, elem_srv, log, db):
         super().__init__(ctx)
+        self._sub_srv = sub_srv
         self._elem_srv = elem_srv
         self._log = log
         self._db = db
@@ -20,27 +21,26 @@ class CreateBatch(rv.Function):
         }
 
     def handle_request(self, request):
-        self._log.info('Handling request: CreateBatch')
-
         sub_id = request['SubscriptionId']
         assert isinstance(sub_id, str)
 
         # make call
 
-        batch_id = self(
+        batch = self(
             sub_id=sub_id,
         )
 
         # format response
 
         return {
-            'BatchId': batch_id,
+            'BatchId': batch.id if (batch is not None) else None,
         }
 
     def __call__(self, sub_id):
-        self._log.info('Handling call: CreateBatch')
+        sub = self._sub_srv.get_subscription(sub_id)
+        self._sub_srv.assert_active(sub)
 
-        elems = self._elem_srv.get_sub_elems(sub_id, state=Element.State.Unconsumed)
+        elems = self._elem_srv.get_sub_elems(sub_id, state=Element.State.AVAILABLE)
         if len(elems) == 0:
             return None
 
@@ -48,10 +48,10 @@ class CreateBatch(rv.Function):
 
         for elem in elems:
             assert elem.sub_id == sub_id
-            assert elem.state == Element.State.Unconsumed
-            elem.state = Element.State.Batched
+            assert elem.state == Element.State.AVAILABLE
+            elem.state = Element.State.BATCHED
             elem.batch_id = batch.id
 
         self._db.commit()
 
-        return elems
+        return batch

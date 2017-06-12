@@ -116,4 +116,10 @@ class S3EventsWorkerResources(ResourceGroup):
             Cluster=ts.Ref(self.ecs_cluster),
             DesiredCount=2,
             TaskDefinition=ts.Ref(self.ecs_task_def),
+            # no limits on the order of stopping / starting tasks
+            # data remains in the queue and workers are gracefully shut down
+            DeploymentConfiguration=ts.ecs.DeploymentConfiguration(
+                MaximumPercent=200,
+                MinimumHealthyPercent=0,
+            ),
         )

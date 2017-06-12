@@ -56,6 +56,7 @@ class NudgeContext:
     attach_trigger = rv.Inject(nudge.core.function.AttachTrigger)
     backfill = rv.Inject(nudge.core.function.Backfill)
     consume = rv.Inject(nudge.core.function.Consume)
+    create_batch = rv.Inject(nudge.core.function.CreateBatch)
     get_batch_elems = rv.Inject(nudge.core.function.GetBatchElements)
     get_sub_batches = rv.Inject(nudge.core.function.GetSubscriptionBatches)
     handle_object_created = rv.Inject(nudge.core.function.HandleObjectCreated)

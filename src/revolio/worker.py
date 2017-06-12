@@ -101,7 +101,7 @@ class SqsWorker(Worker):
             except:
                 self._logger.error('\r'.join([
                     'Error processing message {}'.format(msg['MessageId']),
-                    msg['Body'],
+                    msg,
                     '\r'.join(traceback.format_exc().split('\n')),
                 ]))
 

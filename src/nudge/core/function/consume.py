@@ -19,10 +19,6 @@ class Consume(rv.Function):
         }
 
     def handle_request(self, request):
-        self._log.info('Handling request: Consume')
-
-        # parse parameters
-
         sub_id = request['SubscriptionId']
         assert isinstance(sub_id, str)
 
@@ -41,10 +37,13 @@ class Consume(rv.Function):
         return {'Message': 'Success'}
 
     def __call__(self, sub_id, batch_id):
-        self._log.info('Handling call: Consume')
+        batch = self._batch_srv.get_batch(
+            sub_id=sub_id,
+            batch_id=batch_id,
+        )
 
-        batch = self._batch_srv.get_batch(batch_id)
-        assert batch.state == Batch.State.UNCONSUMED
+        if batch.state is not Batch.State.UNCONSUMED:
+            raise Exception('Batch state is {}'.format(batch.state.value))
 
         batch.state = Batch.State.CONSUMED
 

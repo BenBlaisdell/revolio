@@ -16,10 +16,6 @@ class GetSubscriptionBatches(rv.Function):
         }
 
     def handle_request(self, request):
-        self._log.info('Handling request: GetSubscriptionBatches')
-
-        # parse parameters
-
         sub_id = request['SubscriptionId']
         assert isinstance(sub_id, str)
 
@@ -39,14 +35,13 @@ class GetSubscriptionBatches(rv.Function):
             'Batches': [
                 {
                     'Id': batch.id,
-                    'State': batch.state,
+                    'State': batch.state.value,
                 }
                 for batch in batches
             ],
         }
 
     def __call__(self, sub_id, *, prev_id=None):
-        self._log.info('Handling call: GetSubscriptionBatches')
         batches = self._batch_srv.get_subscription_batches(
             sub_id=sub_id,
             prev_id=prev_id,

@@ -21,10 +21,6 @@ class Subscribe(rv.Function):
         }
 
     def handle_request(self, request):
-        self._log.info('Handling request: Subscribe')
-
-        # parse parameters
-
         bucket = request['Bucket']
         assert isinstance(bucket, str)
 
@@ -59,8 +55,6 @@ class Subscribe(rv.Function):
         }
 
     def __call__(self, bucket, *, prefix=None, regex=None, backfill=False, trigger=None):
-        self._log.info('Handling call: Subscribe')
-
         sub = Subscription.create(
             bucket=bucket,
             prefix=prefix,

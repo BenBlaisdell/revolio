@@ -25,10 +25,6 @@ class HandleObjectCreated(rv.Function):
         }
 
     def handle_request(self, request):
-        self._log.info('Handling request: HandleObjectCreated')
-
-        # parse parameters
-
         bucket = request['Bucket']
         assert isinstance(bucket, str)
 
@@ -48,8 +44,7 @@ class HandleObjectCreated(rv.Function):
             'MatchingSubscriptions': {
                 elem.sub_id: {
                     'ElementId': elem.id,
-                    'Triggered': (batch is not None),
-                    'BatchId': batch,
+                    'BatchId': None if (batch is None) else batch.id,
                 }
                 for elem, batch in self(
                     bucket=bucket,
@@ -61,8 +56,6 @@ class HandleObjectCreated(rv.Function):
         }
 
     def __call__(self, bucket, key, size, created):
-        self._log.info('Handling call: HandleObjectCreated')
-
         result = [
             self._handle_matching_sub(sub, bucket=bucket, key=key, size=size, created=created)
             for sub in self._sub_srv.find_matching_subscriptions(bucket, key)
@@ -80,4 +73,5 @@ class HandleObjectCreated(rv.Function):
             created=created,
         ))
 
-        return elem, self._sub_srv.evaluate(sub)
+        batch = self._sub_srv.evaluate(sub)
+        return elem, batch

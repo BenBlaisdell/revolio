@@ -20,10 +20,6 @@ class Backfill(rv.Function):
         }
 
     def handle_request(self, request):
-        self._log.info('Handling request: Backfill')
-
-        # parse parameters
-
         sub_id = request['SubscriptionId']
         assert isinstance(sub_id, str)
 
@@ -45,13 +41,14 @@ class Backfill(rv.Function):
         }
 
     def __call__(self, sub_id, *, token=None):
-        self._log.info('Handling call: Backfill')
-
         sub = self._sub_srv.get_subscription(sub_id)
-        assert sub.state == Subscription.State.BACKFILLING
+
+        if sub.state is not Subscription.State.BACKFILLING:
+            raise Exception('Subscription is in state'.format(sub.state.value))
 
         r = self._s3.list_objects_v2(
             Bucket=sub.bucket,
+            Prefix=sub.prefix,
             MaxKeys=1000,  # max allowed by api
             **(dict(ContinuationToken=token) if (token is not None) else {})
         )
@@ -74,6 +71,10 @@ class Backfill(rv.Function):
                 created=obj_data['LastModified'],
             ))
             for obj_data in r['Contents']
+            if sub.matches(
+                bucket=sub.bucket,
+                key=obj_data['Key'],
+            )
         ]
 
         if backfill_complete:

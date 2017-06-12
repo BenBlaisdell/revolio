@@ -20,6 +20,7 @@ class App:
             ctx.attach_trigger,
             ctx.backfill,
             ctx.consume,
+            ctx.create_batch,
             ctx.get_batch_elems,
             ctx.get_sub_batches,
             ctx.handle_object_created,
@@ -80,6 +81,8 @@ class App:
 
     def _handle_request(self, f):
         request = flask.request.get_json(force=True)
+
+        self._log.info('Handling request: {}'.format(f.name))
         result = f.handle_request(request)
 
         # commit for safety

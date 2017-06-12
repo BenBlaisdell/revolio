@@ -221,9 +221,9 @@ class SubscriptionService:
     def find_matching_subscriptions(self, bucket, key):
         query = self._db \
             .query(SubscriptionOrm) \
-            .filter(SubscriptionOrm.bucket == bucket)
+            .filter(SubscriptionOrm.state == Subscription.State.ACTIVE.value) \
+            .filter(SubscriptionOrm.bucket == bucket) \
 
-        # escape to prevent '_' or '%' from matching characters
         k = sa.sql.expression.bindparam('k', key)
         query = query \
             .filter(k.startswith(SubscriptionOrm.prefix))
@@ -260,15 +260,17 @@ class SubscriptionService:
 
         self._db.flush()
 
-        if sub.trigger.endpoint is None:
-            return
-
-        sub.trigger.endpoint.send_message(
-            ctx=self._ctx,
-            msg=sub.subscriber_ping_data,
-        )
+        if sub.trigger.endpoint is not None:
+            sub.trigger.endpoint.send_message(
+                ctx=self._ctx,
+                msg=sub.subscriber_ping_data,
+            )
 
         return batch
+
+    def assert_active(self, sub):
+        if sub.state is not Subscription.State.ACTIVE:
+            raise Exception('Subscription state is {}'.format(sub.state.value))
 
 
 def _batch_size(elems):

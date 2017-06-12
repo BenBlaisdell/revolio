@@ -91,7 +91,6 @@ class App:
 
 if __name__ == '__main__':
     ctx = nudge.core.context.NudgeContext(
-        json.loads(os.environ['S3_CONFIG_URI']),
         flask_config={
             'DEBUG': True,
         }

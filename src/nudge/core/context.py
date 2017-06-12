@@ -14,8 +14,7 @@ import nudge.core.log
 
 class NudgeContext:
 
-    def __init__(self, config_s3_uri, *, flask_config=None):
-        self._config_s3_uri = config_s3_uri
+    def __init__(self, *, flask_config=None):
         self._flask_config = flask_config or {}
 
     @threaded_cached_property
@@ -34,10 +33,6 @@ class NudgeContext:
     @threaded_cached_property
     def ctx(self):
         return self
-
-    @threaded_cached_property
-    def config_s3_uri(self):
-        return self._config_s3_uri
 
     @threaded_cached_property
     def def_queue_url(self):

@@ -29,6 +29,7 @@ import troposphere.route53
 from cached_property import cached_property
 
 import nudge.manager.util
+from nudge.core.config import ConfigService
 from revolio.manager.stack import resource, resource_group, parameter, ResourceGroup
 
 
@@ -447,8 +448,10 @@ class WebResources(ResourceGroup):
             Memory=256,
             LogConfiguration=nudge.manager.util.aws_logs_config(self.log_group_name),
             Environment=nudge.manager.util.env(
-                # todo: get from load location
-                S3_CONFIG_URI=self.s3_config_uri,
+                prefix=ConfigService.ENV_VAR_PREFIX,
+                variables={
+                     ConfigService.S3_CONFIG_URI: self.s3_config_uri,
+                }
             ),
         )
 

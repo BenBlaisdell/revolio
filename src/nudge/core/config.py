@@ -1,3 +1,5 @@
+import json
+import os
 import re
 import time
 
@@ -7,10 +9,18 @@ import ruamel.yaml as ryaml
 
 class ConfigService:
 
-    def __init__(self, log, s3, config_s3_uri):
+    ENV_VAR_PREFIX = 'NDG_APP'
+    S3_CONFIG_URI = 'S3_CONFIG_URI'
+
+    def __init__(self, log, s3):
         self._log = log
         self._s3 = s3
-        self._config_s3_uri = config_s3_uri
+
+    def _get_env_var_name(self, key):
+        return '{}_{}'.format(self.ENV_VAR_PREFIX, key)
+
+    def _get_env_var(self, key):
+        return json.loads(os.environ[self._get_env_var_name(key)])
 
     @threaded_cached_property
     def _config(self):
@@ -18,10 +28,12 @@ class ConfigService:
 
     @threaded_cached_property
     def _raw_config(self):
+        s3_config_uri = self._get_env_var(ConfigService.S3_CONFIG_URI)
+
         while True:
-            self._log.info('Fetching S3 config: {}'.format(self._config_s3_uri))
+            self._log.info('Fetching S3 config: {}'.format(s3_config_uri))
             try:
-                return self._s3.get_object(**_parse_s3_uri(self._config_s3_uri))['Body']
+                return self._s3.get_object(**_parse_s3_uri(s3_config_uri))['Body']
             except Exception as e:
                 self._log.warning('Error fetching S3 config: {}'.format(str(e)))
                 time.sleep(5)

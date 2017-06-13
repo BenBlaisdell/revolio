@@ -1,23 +1,12 @@
-import itertools
-
-import awacs.aws
-import awacs.autoscaling
-import awacs.ecs
-import awacs.helpers.trust
-import awacs.logs
-import awacs.sqs
 from cached_property import cached_property
 
-from nudge.worker.deferral import DeferralWorker
 from revolio import resource, parameter, ResourceGroup, SqsWorker
 import troposphere as ts
-import troposphere.autoscaling
-import troposphere.cloudformation
-import troposphere.ec2
 import troposphere.ecs
 import troposphere.sqs
 
 import nudge.manager.util
+from nudge.worker.deferral import DeferralWorker
 
 
 class DeferralWorkerResources(ResourceGroup):
@@ -60,7 +49,7 @@ class DeferralWorkerResources(ResourceGroup):
 
     @image.value
     def image_value(self):
-        return nudge.manager.util.get_latest_image_tag(self.config['Repo'])
+        return nudge.manager.util.get_latest_image_tag(self.env.config['Ecr']['Repos']['Env']['Url'], *nudge.manager.Component.DEF.value)
 
     @resource
     def ecs_task_def(self):

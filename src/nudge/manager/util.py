@@ -33,48 +33,55 @@ _ecr_re = re.compile(
 )
 
 
-def get_next_image_tag(uri):
+def get_next_image_tag(uri, *args):
     m = _ecr_re.match(uri).groupdict()
-    return '{uri}:{v}'.format(
+    return '{uri}:{t}'.format(
         uri=uri,
-        v=_get_next_version(m['account'], m['repo']),
+        t=_get_next_version_tag(m['account'], m['repo'], *args),
     )
 
 
-def get_latest_image_version(uri):
+def get_latest_image_tag(uri, *args):
     m = _ecr_re.match(uri).groupdict()
-    return _get_latest_version(m['account'], m['repo'])
-
-
-def get_latest_image_tag(uri):
-    m = _ecr_re.match(uri).groupdict()
-    return '{uri}:{v}'.format(
+    return '{uri}:{p}-{v}'.format(
         uri=uri,
-        v=_get_latest_version(m['account'], m['repo']),
+        p='-'.join(args),
+        v=_get_latest_version(m['account'], m['repo'], *args),
     )
 
 
-def _get_next_version(reg_id, repo):
-    major, minor, build = map(int, _get_latest_version(reg_id, repo).split('.'))
+def _get_next_version_tag(reg_id, repo, *args):
+    major, minor, build = map(int, _get_latest_version(reg_id, repo, *args).split('.'))
     build += 1
 
-    return '.'.join(map(str, (major, minor, build)))
+    return '{p}-{v}'.format(
+        p='-'.join(args),
+        v='.'.join(map(str, (major, minor, build))),
+    )
 
 
-def _get_latest_version(reg_id, repo):
+def _get_latest_version(reg_id, repo, *args):
+    tags = map(
+        lambda i: i['imageTag'],
+        itertools.chain.from_iterable(map(
+            lambda r: r['imageIds'],
+            _ecr_client.get_paginator('list_images').paginate(
+                registryId=reg_id,
+                repositoryName=repo,
+                filter={'tagStatus': 'TAGGED'},
+            ),
+        )),
+    )
+
+    # get only the desired component tags
+    prefix = '{}-'.format('-'.join(args))
+    tags = filter(lambda t: t.startswith(prefix), tags)
+
+    versions = map(lambda t: packaging.version.parse(t[len(prefix):]), tags)
+
     return max(itertools.chain(
         [packaging.version.parse('0.0.0')],  # default if no images yet
-        map(
-            lambda i: packaging.version.parse(i['imageTag']),
-            itertools.chain.from_iterable(map(
-                lambda r: r['imageIds'],
-                _ecr_client.get_paginator('list_images').paginate(
-                    registryId=reg_id,
-                    repositoryName=repo,
-                    filter={'tagStatus': 'TAGGED'},
-                ),
-            )),
-        )
+        versions,
     )).base_version
 
 

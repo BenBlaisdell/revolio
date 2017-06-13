@@ -15,8 +15,7 @@ def release_img(ctx, component, dm_name):
 
 
 def build_img(ctx, component, dm_name, *, no_cache=False):
-    repo_uri = ctx.get_repo_uri(component)
-    tag = nudge.manager.util.get_next_image_tag(repo_uri)
+    tag = nudge.manager.util.get_next_image_tag(ctx.repo_uri, *component.value)
 
     _execute_commands(
         'eval $(docker-machine env {})'.format(dm_name),

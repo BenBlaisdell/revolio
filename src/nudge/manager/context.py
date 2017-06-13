@@ -44,9 +44,9 @@ class NudgeCommandContext(object):
     def _base_data_path(self):
         return os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data')
 
-    def get_repo_uri(self, c):
-        a, b = c.value
-        return self.stack_config['Ecr']['Repos'][a.capitalize()][b.capitalize()]['Url']
+    @cached_property
+    def repo_uri(self):
+        return self.stack_config['Ecr']['Repos']['Env']['Url']
 
     def get_dockerfile_path(self, component):
         a, b = component.value
@@ -91,7 +91,8 @@ class NudgeCommandContext(object):
         return self._get_yaml_resource('stack/resources.yaml')
 
     def get_stack_parameters(self, initial):
-        return self.stack.get_parameters()
+        p = self.stack.get_parameters()
+        return p
 
     @cached_property
     def stack_tags(self):

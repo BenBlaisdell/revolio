@@ -28,6 +28,7 @@ import troposphere.sqs
 import troposphere.route53
 from cached_property import cached_property
 
+import nudge.manager
 import nudge.manager.util
 from nudge.core.config import ConfigService
 from revolio.manager.stack import resource, resource_group, parameter, ResourceGroup
@@ -437,7 +438,7 @@ class WebResources(ResourceGroup):
 
     @app_image.value
     def app_image_value(self):
-        return nudge.manager.util.get_latest_image_tag(self.app_repo_uri)
+        return nudge.manager.util.get_latest_image_tag(self.env.config['Ecr']['Repos']['Env']['Url'], *nudge.manager.Component.APP.value)
 
     @cached_property
     def app_container_def(self):
@@ -464,7 +465,7 @@ class WebResources(ResourceGroup):
 
     @nginx_image.value
     def nginx_version_value(self):
-        return nudge.manager.util.get_latest_image_tag(self.nginx_repo_uri)
+        return nudge.manager.util.get_latest_image_tag(self.env.config['Ecr']['Repos']['Env']['Url'], *nudge.manager.Component.NGX.value)
 
     @cached_property
     def nginx_container_def(self):

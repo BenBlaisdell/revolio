@@ -49,6 +49,6 @@ class Serializable(metaclass=abc.ABCMeta):
 
 def _transform_keys(dct, func):
     return {
-        revolio.util.camel_to_snake(k): _transform_keys(v, func) if isinstance(v, collections.Mapping) else v
+        func(k): _transform_keys(v, func) if isinstance(v, collections.Mapping) else v
         for k, v in dct.items()
     }

@@ -144,12 +144,12 @@ class Subscription(rv.Entity):
 
     @property
     def trigger(self):
-        return Subscription.Trigger.deserialize(self._orm.data['trigger'])
+        return Subscription.Trigger.deserialize(self._orm.data['trigger'], key_format=KeyFormat.Snake)
 
     @trigger.setter
     def trigger(self, trigger):
         assert isinstance(trigger, Subscription.Trigger)
-        self._orm.data['trigger'] = trigger.serialize()
+        self._orm.data['trigger'] = trigger.serialize(key_format=KeyFormat.Snake)
 
     @property
     def subscriber_ping_data(self):

@@ -35,7 +35,7 @@ class Function(metaclass=abc.ABCMeta):
 
     @property
     def url_path(self):
-        return '{prefix}/call/{name}/'.format(
+        return '{prefix}/call/{name}'.format(
             prefix=self.url_prefix,
             name=type(self).__name__,
         )

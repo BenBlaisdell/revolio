@@ -4,6 +4,7 @@ from cached_property import cached_property
 from revolio import resource, parameter, ResourceGroup, SqsWorker
 import troposphere as ts
 import troposphere.ecs
+import troposphere.logs
 import troposphere.sqs
 
 import nudge.manager.util
@@ -16,11 +17,22 @@ class S3EventsWorkerResources(ResourceGroup):
     def queue_name(self):
         return self.config['S3Events']['QueueName']
 
-    def __init__(self, ctx, env, cluster, log_group_name):
+    @cached_property
+    def log_group_name(self):
+        return self.config['LogGroupName']
+
+    def __init__(self, ctx, env, cluster):
         super().__init__(ctx, env.config['Worker']['S3Events'], prefix='S3EventsWorker')
         self.env = env
         self.ecs_cluster = cluster
-        self.log_group_name = log_group_name
+
+    @resource
+    def log_group(self):
+        return ts.logs.LogGroup(
+            self._get_logical_id('LogGroup'),
+            LogGroupName=self.log_group_name,
+            RetentionInDays=14,
+        )
 
     @resource
     def queue(self):
@@ -41,19 +53,35 @@ class S3EventsWorkerResources(ResourceGroup):
             Queues=[ts.Ref(self.queue)],
             PolicyDocument={
                 'Version': '2012-10-17',
-                'Statement': [{
-                    'Sid': 'allow-s3-notifications',
-                    'Effect': 'Allow',
-                    'Principal': {
-                      'AWS': '*'
+                'Statement': [
+                    {
+                        'Sid': 'allow-s3-notifications',
+                        'Effect': 'Allow',
+                        'Principal': {
+                          'AWS': '*'
+                        },
+                        'Action': ['sqs:SendMessage'],
+                        'Resource': '*',
+                        'Condition': {
+                            # allow notifications from all buckets
+                            'ArnLike': {'aws:SourceArn': 'arn:aws:s3:*:*:*'}
+                        },
                     },
-                    'Action': ['sqs:SendMessage'],
-                    'Resource': '*',
-                    'Condition': {
-                        # allow notifications from all buckets
-                        'ArnLike': {'aws:SourceArn': 'arn:aws:s3:*:*:*'}
-                    }
-                }]
+                    {
+                        'Sid': 'allow-sns-notifications',
+                        'Effect': 'Allow',
+                        'Principal': {
+                          'AWS': '*'
+                        },
+                        'Action': ['sqs:SendMessage'],
+                        'Resource': '*',
+                        'Condition': {
+                            # todo: allow all topics?
+                            'ArnEquals': {'aws:SourceArn': self.config['SourceTopics']}
+
+                        },
+                    },
+                ]
             },
         )
 

@@ -33,17 +33,17 @@ class App:
 
         self._log.info('Adding endpoint: CheckHealth')
         self._app.add_url_rule(
-            '/api/1/call/CheckHealth/',
+            '/api/1/call/CheckHealth',
             'CheckHealth',
             lambda: 'Healthy',
             methods=['GET'],
         )
 
-        @self._app.errorhandler(500)
-        def log_exception(exception):
-            tb = traceback.format_exc()
-            self._log.warning(tb)
-            return tb, 500
+        # @self._app.errorhandler(500)
+        # def log_exception(exception):
+        #     tb = traceback.format_exc()
+        #     self._log.warning(tb)
+        #     return tb, 500
 
         db.init_app(self._app)
         self._db = db
@@ -83,13 +83,21 @@ class App:
         request = flask.request.get_json(force=True)
 
         self._log.info('Handling request: {}'.format(f.name))
-        result = f.handle_request(request)
 
-        # commit for safety
-        # todo: auto-commit all functions
-        self._db.commit()
+        try:
+            code, result = 200, f.handle_request(request)
 
-        return json.dumps(result)
+            # commit for safety
+            # todo: auto-commit all functions
+            self._db.commit()
+        except:
+            e = traceback.format_exc()
+            self._log.warning(e)
+            code, result = 500, {
+                'Traceback': e.split('\n'),
+            }
+
+        return json.dumps(result), code
 
 
 if __name__ == '__main__':

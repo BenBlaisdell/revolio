@@ -3,6 +3,7 @@ from cached_property import cached_property
 from revolio import resource, parameter, ResourceGroup, SqsWorker
 import troposphere as ts
 import troposphere.ecs
+import troposphere.logs
 import troposphere.sqs
 
 import nudge.manager.util
@@ -15,11 +16,22 @@ class DeferralWorkerResources(ResourceGroup):
     def queue_name(self):
         return self.config['S3Events']['QueueName']
 
-    def __init__(self, ctx, env, cluster, log_group_name):
+    @cached_property
+    def log_group_name(self):
+        return self.config['LogGroupName']
+
+    def __init__(self, ctx, env, cluster):
         super().__init__(ctx, env.config['Worker']['Deferral'], prefix='DeferralWorker')
         self.env = env
         self.ecs_cluster = cluster
-        self.log_group_name = log_group_name
+
+    @resource
+    def log_group(self):
+        return ts.logs.LogGroup(
+            self._get_logical_id('LogGroup'),
+            LogGroupName=self.log_group_name,
+            RetentionInDays=14,
+        )
 
     @resource
     def queue(self):

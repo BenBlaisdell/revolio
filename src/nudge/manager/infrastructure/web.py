@@ -637,13 +637,13 @@ class WebService(ResourceGroup):
             Scheme=self.elb_scheme,
             Subnets=self.subnets,
             SecurityGroups=[ts.Ref(self.security_group)],
-            # LoadBalancerAttributes=[
-            #     ts.elasticloadbalancingv2.LoadBalancerAttributes(Key=k, Value=v)
-            #     for k, v in [
-            #         ('access_logs.s3.enabled', 'true'),
-            #         ('access_logs.s3.bucket', self.config['External']['AccessLogsBucket']),
-            #     ]
-            # ],
+            LoadBalancerAttributes=[
+                ts.elasticloadbalancingv2.LoadBalancerAttributes(Key=k, Value=v)
+                for k, v in [
+                    ('access_logs.s3.enabled', 'true'),
+                    ('access_logs.s3.bucket', self.config['AccessLogsBucket']),
+                ]
+            ],
         )
 
     @resource
@@ -656,7 +656,7 @@ class WebService(ResourceGroup):
             HealthCheckTimeoutSeconds=10,
             HealthyThresholdCount=4,
             # todo: point to definiiton
-            HealthCheckPath='/api/1/call/CheckHealth/',
+            HealthCheckPath='/api/1/call/CheckHealth',
             Port=8080,
             Protocol='HTTP',
             UnhealthyThresholdCount=4,

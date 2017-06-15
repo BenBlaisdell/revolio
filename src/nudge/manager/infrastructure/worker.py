@@ -57,10 +57,6 @@ class WorkerResources(ResourceGroup):
     def cluster_name(self):
         return self.config['ClusterName']
 
-    @cached_property
-    def log_group_name(self):
-        return self.config['LogGroupName']
-
     def __init__(self, ctx, env):
         super().__init__(ctx, env.config['Worker'], prefix='Worker')
         self.env = env
@@ -71,7 +67,6 @@ class WorkerResources(ResourceGroup):
             self._ctx,
             self.env,
             self.ecs_cluster,
-            self.log_group_name,
         )
 
     @resource_group
@@ -80,15 +75,6 @@ class WorkerResources(ResourceGroup):
             self._ctx,
             self.env,
             self.ecs_cluster,
-            self.log_group_name,
-        )
-
-    @resource
-    def log_group(self):
-        return ts.logs.LogGroup(
-            self._get_logical_id('LogGroup'),
-            LogGroupName=self.log_group_name,
-            RetentionInDays=14,
         )
 
     @resource

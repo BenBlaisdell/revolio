@@ -70,7 +70,7 @@ class Backfill(rv.Function):
                 size=obj_data['Size'],
                 created=obj_data['LastModified'],
             ))
-            for obj_data in r['Contents']
+            for obj_data in r.get('Contents', [])
             if sub.matches(
                 bucket=sub.bucket,
                 key=obj_data['Key'],

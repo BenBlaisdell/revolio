@@ -92,7 +92,9 @@ class SqsWorker(Worker):
 
     def _task(self):
         for msg in self._get_messages():
-            self._logger.info('Received message {}'.format(msg['MessageId']))
+            self._logger.info('Received message {}'.format(
+                json.dumps(msg, sort_keys=True, indent=4, separators=(',', ': ')),
+            ))
 
             try:
                 self._handle_message(json.loads(msg['Body']))
@@ -101,8 +103,7 @@ class SqsWorker(Worker):
             except:
                 self._logger.error('\r'.join([
                     'Error processing message {}'.format(msg['MessageId']),
-                    msg,
-                    '\r'.join(traceback.format_exc().split('\n')),
+                    traceback.format_exc(),
                 ]))
 
     @abc.abstractmethod

@@ -1,3 +1,4 @@
+import datetime as dt
 import json
 import logging
 import os
@@ -5,6 +6,7 @@ import sys
 
 from cached_property import cached_property
 import revolio as rv
+import revolio.logging
 
 from nudge.core.client import NudgeClient
 
@@ -17,7 +19,7 @@ ch = logging.StreamHandler(stream=sys.stdout)
 ch.setLevel(logging.DEBUG)
 
 # formatter
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = rv.logging.Formatter()
 ch.setFormatter(formatter)
 
 # attach handlers
@@ -48,13 +50,18 @@ class S3EventsWorker(rv.SqsWorker):
         #     _logger.info('Received test event message for bucket {}'.format(msg['Bucket']))
         #     return
 
+        # extract s3 notification if receiving from sns
+        if msg.get('Type') == 'Notification':
+            msg = json.loads(msg['Message'])
+
         for record in msg.get('Records', []):
             if 'ObjectCreated' in record['eventName']:
 
                 bucket = record['s3']['bucket']['name']
                 key = record['s3']['object']['key']
                 size = record['s3']['object']['size']
-                created = record['eventTime']
+                # remove milliseconds and add space between date and time
+                created = record['eventTime'][:-len('.000Z')].replace('T', ' ')
 
                 _logger.info('\r'.join(['Sending S3 object s3://{b}/{k}'.format(
                     b=bucket,

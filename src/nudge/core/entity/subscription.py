@@ -229,7 +229,7 @@ class SubscriptionService:
             .filter(k.startswith(SubscriptionOrm.prefix))
 
         subs = [Subscription(orm) for orm in query.all()]
-        subs = filter(lambda s: s.matches(bucket, key), subs)
+        subs = list(filter(lambda s: s.matches(bucket, key), subs))
 
         self._log.debug('Found subscriptions matching bucket="{b}" key="{k}": {s}'.format(
             b=bucket,

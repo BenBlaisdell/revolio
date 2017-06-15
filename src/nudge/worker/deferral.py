@@ -6,6 +6,7 @@ import sys
 import requests
 from cached_property import cached_property
 import revolio as rv
+import revolio.logging
 import revolio.util
 
 
@@ -17,7 +18,7 @@ ch = logging.StreamHandler(stream=sys.stdout)
 ch.setLevel(logging.DEBUG)
 
 # formatter
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = rv.logging.Formatter()
 ch.setFormatter(formatter)
 
 # attach handlers

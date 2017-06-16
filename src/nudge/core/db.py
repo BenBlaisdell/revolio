@@ -1,15 +1,19 @@
+import logging
+
 import flask_sqlalchemy
 import sqlalchemy as sa
 
 from nudge.core.entity import Orm
 
 
+_log = logging.getLogger(__name__)
+
+
 class Database:
 
-    def __init__(self, log, db_uri):
+    def __init__(self, db_uri):
         self._db_uri = db_uri
         self._db = flask_sqlalchemy.SQLAlchemy()
-        self._log = log
 
     @property
     def _session(self):
@@ -33,20 +37,20 @@ class Database:
         self.create_tables()
 
     def create_tables(self):
-        self._log.info('Creating tables')
+        _log.info('Creating tables')
         Orm.metadata.create_all(bind=self._engine)
 
     def drop_tables(self):
-        self._log.info('Dropping tables')
+        _log.info('Dropping tables')
         # reflect to include tables not defined in code
         meta = sa.MetaData()
         meta.reflect(bind=self._engine)
         for table in reversed(meta.sorted_tables):
-            self._log.info('Dropping table: {}'.format(table.name))
+            _log.info('Dropping table: {}'.format(table.name))
             table.drop(bind=self._engine)
 
     def add(self, entity):
-        self._log.info('Creating entity {}'.format(entity))
+        _log.info('Creating entity {}'.format(entity))
         self._session.add(entity.orm)
         return entity
 

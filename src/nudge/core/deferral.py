@@ -1,14 +1,17 @@
-from flask import json
+import json
+import logging
 
 import revolio as rv
 import revolio.util
 
 
+_log = logging.getLogger(__name__)
+
+
 class DeferralSrv:
 
-    def __init__(self, log, sqs, def_queue_url):
+    def __init__(self, sqs, def_queue_url):
         super().__init__()
-        self._log = log
         self._sqs = sqs
         self._queue_url = def_queue_url
 
@@ -16,7 +19,7 @@ class DeferralSrv:
         url = func.internal_url
         body = func.format_request(*args, **kwargs)
 
-        self._log.info('Sending deferred call:', url, rv.util.log_dumps(body))
+        _log.info('Sending deferred call:', url, rv.util.log_dumps(body))
 
         self._sqs.send_message(
             QueueUrl=self._queue_url,

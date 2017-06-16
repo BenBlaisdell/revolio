@@ -4,15 +4,15 @@ import revolio as rv
 from nudge.core.entity import Element, Batch
 
 from nudge.core.entity.subscription import Subscription
+from nudge.core.util import autocommit
 
 
 class CreateBatch(rv.Function):
 
-    def __init__(self, ctx, sub_srv, elem_srv, log, db):
+    def __init__(self, ctx, sub_srv, elem_srv, db):
         super().__init__(ctx)
         self._sub_srv = sub_srv
         self._elem_srv = elem_srv
-        self._log = log
         self._db = db
 
     def format_request(self, sub_id):
@@ -36,6 +36,7 @@ class CreateBatch(rv.Function):
             'BatchId': batch.id if (batch is not None) else None,
         }
 
+    @autocommit
     def __call__(self, sub_id):
         sub = self._sub_srv.get_subscription(sub_id)
         self._sub_srv.assert_active(sub)
@@ -51,7 +52,5 @@ class CreateBatch(rv.Function):
             assert elem.state == Element.State.AVAILABLE
             elem.state = Element.State.BATCHED
             elem.batch_id = batch.id
-
-        self._db.commit()
 
         return batch

@@ -1,3 +1,5 @@
+import revolio
+
 import logging
 import uuid
 
@@ -36,34 +38,41 @@ class RequestIdFilter(logging.Filter):
     # the logging format. Note that we're checking if we're in a request
     # context, as we may want to log things before Flask is fully loaded.
     def filter(self, record):
-        record.request_id = request_id() if flask.has_request_context() else ''
+        record.request_id = request_id() if flask.has_request_context() else 'setup'
         return True
 
 
 class Formatter(logging.Formatter):
 
     def __init__(self, flask=False):
-        super().__init__(''.join([
-            '%(asctime)s - ',
-            ('%(request_id)s - ' if flask else ''),
-            '%(name)s - %(levelname)s - %(message)s'
-        ]))
+        f = ['%(asctime)s']
+
+        if flask:  # must have RequestIdFilter attached
+            f.append('%(request_id)s')
+
+        f.append('%(name)s:%(lineno)d')
+        f.append('%(levelname)s')
+        f.append('%(message)s')
+
+        super().__init__(' - '.join(f))
 
     def format(self, record):
+        # \r keeps the record intact in cloudwatch
+        # appears as a space when condensed and a new line when expanded
         record.msg = record.msg.replace('\n', '\r')
         return super(Formatter, self).format(record)
 
 
-def get_flask_logger(name):
-    f = RequestIdFilter()
-
+def init(module, flask=False):
     h = logging.StreamHandler()
     h.setLevel(logging.DEBUG)
-    h.addFilter(f)
-    h.setFormatter(Formatter(flask=True))
 
-    l = logging.getLogger(name)
-    l.setLevel(logging.DEBUG)
-    l.addHandler(h)
+    if flask:
+        h.addFilter(RequestIdFilter())
 
-    return l, h
+    h.setFormatter(Formatter(flask=flask))
+
+    for name in [module.__name__, revolio.__name__, 'sqlalchemy.engine']:
+        l = logging.getLogger(name)
+        l.setLevel(logging.DEBUG)
+        l.addHandler(h)

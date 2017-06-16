@@ -1,6 +1,7 @@
 import abc
 import enum
 import json
+import logging
 import re
 import uuid
 
@@ -9,6 +10,9 @@ from revolio.serializable import KeyFormat
 import sqlalchemy as sa
 
 from nudge.core.entity import Orm, Batch, Element
+
+
+_log = logging.getLogger(__name__)
 
 
 class SubscriptionEndpointProtocol(enum.Enum):
@@ -153,7 +157,7 @@ class Subscription(rv.Entity):
 
     @property
     def subscriber_ping_data(self):
-        return self.trigger.custom if (self.trigger.custom is not None) else {'SubscriptionId': self.id}
+        return json.loads(self.trigger.custom) if (self.trigger.custom is not None) else {'SubscriptionId': self.id}
 
     @staticmethod
     def create(bucket, *, prefix=None, regex=None, trigger=None):
@@ -199,11 +203,10 @@ class SubscriptionOrm(Orm):
 
 class SubscriptionService:
 
-    def __init__(self, ctx, db, log, elem_srv):
+    def __init__(self, ctx, db, elem_srv):
         super(SubscriptionService, self).__init__()
         self._ctx = ctx
         self._db = db
-        self._log = log
         self._elem_srv = elem_srv
 
     def get_subscription(self, sub_id):
@@ -215,7 +218,7 @@ class SubscriptionService:
             raise Exception('No subscription with id {}'.format(sub_id))
 
         sub = Subscription(orm)
-        self._log.debug('Found {} by id'.format(sub))
+        _log.debug('Found {} by id'.format(sub))
         return sub
 
     def find_matching_subscriptions(self, bucket, key):
@@ -231,7 +234,7 @@ class SubscriptionService:
         subs = [Subscription(orm) for orm in query.all()]
         subs = list(filter(lambda s: s.matches(bucket, key), subs))
 
-        self._log.debug('Found subscriptions matching bucket="{b}" key="{k}": {s}'.format(
+        _log.debug('Found subscriptions matching bucket="{b}" key="{k}": {s}'.format(
             b=bucket,
             k=key,
             s=subs,
@@ -240,13 +243,20 @@ class SubscriptionService:
         return subs
 
     def evaluate(self, sub):
+        _log.info('Evaluating {}'.format(sub))
+
         if sub.trigger is None:
+            _log.info('No trigger attached')
             return
 
         elems = self._elem_srv.get_sub_elems(sub.id, state=Element.State.AVAILABLE)
         if _batch_size(elems) >= sub.trigger.threshold:
+            _log.info('{s} has passed threshold of {t} with elements {e}'.format(
+                s=sub, t=sub.trigger.threshold, e=elems,
+            ))
             return self._create_and_send_batch(sub, elems)
 
+        _log.info('{s} not ready to batch')
         return None
 
     def _create_and_send_batch(self, sub, elems):
@@ -261,6 +271,7 @@ class SubscriptionService:
         self._db.flush()
 
         if sub.trigger.endpoint is not None:
+            _log.info('Sending {} trigger message'.format(sub))
             sub.trigger.endpoint.send_message(
                 ctx=self._ctx,
                 msg=sub.subscriber_ping_data,

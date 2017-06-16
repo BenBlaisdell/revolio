@@ -9,9 +9,6 @@ import troposphere as ts
 import troposphere.ecr
 
 
-_logger = logging.getLogger(__name__)
-
-
 class EcrResources(ResourceGroup):
 
     @cached_property

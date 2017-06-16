@@ -9,9 +9,6 @@ from nudge.manager.infrastructure.worker import WorkerResources
 from revolio.manager.stack import resource_group, ResourceGroup
 
 
-_logger = logging.getLogger(__name__)
-
-
 class EnvResources(ResourceGroup):
 
     @cached_property

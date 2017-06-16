@@ -14,7 +14,7 @@ from nudge.manager.infrastructure.ecr import EcrResources
 from nudge.manager.util import EnumType
 
 
-_logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 @click.group()
@@ -58,7 +58,7 @@ def update_stack(cmd_ctx, blind):
 @cli.command('build-ecr')
 @click.pass_obj
 def build_ecr(cmd_ctx):
-    _logger.info(EcrResources(cmd_ctx, cmd_ctx.stack_config['Ecr']).get_template())
+    _log.info(EcrResources(cmd_ctx, cmd_ctx.stack_config['Ecr']).get_template())
 
 
 # docker
@@ -103,7 +103,7 @@ def upload_config(cmd_ctx):
 @click.option('--upper', '-u', is_flag=True)
 def gen_id(upper):
     options = (string.ascii_uppercase if upper else string.ascii_lowercase) + string.digits
-    _logger.info(''.join(random.choice(options) for _ in range(12)))
+    _log.info(''.join(random.choice(options) for _ in range(12)))
 
 
 if __name__ == '__main__':

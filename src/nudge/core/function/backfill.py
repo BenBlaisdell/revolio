@@ -1,14 +1,19 @@
+import logging
+
 import revolio as rv
 
 from nudge.core.entity import Subscription, Element
+from nudge.core.util import autocommit
+
+
+_log = logging.getLogger(__name__)
 
 
 class Backfill(rv.Function):
 
-    def __init__(self, ctx, db, log, sub_srv, s3, deferral):
+    def __init__(self, ctx, db, sub_srv, s3, deferral):
         super().__init__(ctx)
         self._db = db
-        self._log = log
         self._sub_srv = sub_srv
         self._s3 = s3
         self._deferral = deferral
@@ -40,6 +45,7 @@ class Backfill(rv.Function):
             'BackfillComplete': backfill_complete,
         }
 
+    @autocommit
     def __call__(self, sub_id, *, token=None):
         sub = self._sub_srv.get_subscription(sub_id)
 
@@ -54,8 +60,10 @@ class Backfill(rv.Function):
         )
 
         backfill_complete = not r.get('IsTruncated', False)
-
         if not backfill_complete:
+            _log.info('Sending deferred {s} backfill continuation call with token {t}'.format(
+                s=sub, t=r['ContinuationToken'],
+            ))
             self._deferral.send_call(
                 self,
                 sub.id,
@@ -78,8 +86,8 @@ class Backfill(rv.Function):
         ]
 
         if backfill_complete:
+            _log.info('{} backfilling is complete'.format(sub))
             sub.state = Subscription.State.ACTIVE
-
-        self._db.commit()
+            self._sub_srv.evaluate(sub)
 
         return elems, backfill_complete

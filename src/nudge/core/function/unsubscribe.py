@@ -1,15 +1,15 @@
 import revolio as rv
 
 from nudge.core.entity import Subscription
+from nudge.core.util import autocommit
 
 
 class Unsubscribe(rv.Function):
 
-    def __init__(self, ctx, db, sub_srv, log):
+    def __init__(self, ctx, db, sub_srv):
         super().__init__(ctx)
         self._db = db
         self._sub_srv = sub_srv
-        self._log = log
 
     def format_request(self, sub_id):
         return {
@@ -28,9 +28,9 @@ class Unsubscribe(rv.Function):
 
         return {'Message': 'Success'}
 
+    @autocommit
     def __call__(self, sub_id):
         sub = self._sub_srv.get_subscription(sub_id)
         self._sub_srv.assert_active(sub)
 
         sub.state = Subscription.State.INACTIVE
-        self._db.commit()

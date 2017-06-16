@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import pathlib as pl
 import traceback
@@ -7,11 +8,13 @@ import flask
 import nudge.core.context
 
 
+_log = logging.getLogger(__name__)
+
+
 class App:
 
-    def __init__(self, ctx, flask_config, db, log):
+    def __init__(self, ctx, flask_config, db):
         self._ctx = ctx
-        self._log = log
 
         self._app = flask.Flask('nudge')
         self._app.config.update(**flask_config)
@@ -31,7 +34,7 @@ class App:
         for f in functions:
             self._add_function(f)
 
-        self._log.info('Adding endpoint: CheckHealth')
+        _log.info('Adding endpoint: CheckHealth')
         self._app.add_url_rule(
             '/api/1/call/CheckHealth',
             'CheckHealth',
@@ -42,7 +45,7 @@ class App:
         # @self._app.errorhandler(500)
         # def log_exception(exception):
         #     tb = traceback.format_exc()
-        #     self._log.warning(tb)
+        #     _log.warning(tb)
         #     return tb, 500
 
         db.init_app(self._app)
@@ -71,7 +74,7 @@ class App:
 
     def _add_function(self, f):
         endpoint = f.url_path
-        self._log.info('Adding endpoint: {}'.format(endpoint))
+        _log.info('Adding endpoint: {}'.format(endpoint))
         self._app.add_url_rule(
             endpoint,
             f.name,
@@ -82,7 +85,7 @@ class App:
     def _handle_request(self, f):
         request = flask.request.get_json(force=True)
 
-        self._log.info('Handling request: {}'.format(f.name))
+        _log.info('Handling request: {}'.format(f.name))
 
         try:
             code, result = 200, f.handle_request(request)
@@ -92,7 +95,7 @@ class App:
             self._db.commit()
         except:
             e = traceback.format_exc()
-            self._log.warning(e)
+            _log.warning(e)
             code, result = 500, {
                 'Traceback': e.split('\n'),
             }

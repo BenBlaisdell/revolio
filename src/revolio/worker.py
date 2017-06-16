@@ -1,6 +1,7 @@
 import functools
 import json
 import abc
+import logging
 import os
 import traceback
 import signal
@@ -9,26 +10,25 @@ import boto3
 from cached_property import cached_property
 
 
-class Worker(metaclass=abc.ABCMeta):
+_log = logging.getLogger(__name__)
 
-    def __init__(self, logger):
-        super().__init__()
-        self._logger = logger
+
+class Worker(metaclass=abc.ABCMeta):
 
     def run(self):
         signal_received = Wrapper(False)
-        partial = functools.partial(_handler, self._logger, signal_received)
+        partial = functools.partial(_handler, signal_received)
 
         # try to allow for graceful shutdown
         for sig in [signal.SIGTERM, signal.SIGINT]:
             signal.signal(sig, partial)
 
-        self._logger.info('Started worker: %s' % type(self).__name__)
+        _log.info('Started worker: %s' % type(self).__name__)
         while not signal_received.value:
             try:
                 self._task()
             except Exception:
-                self._logger.error(json.dumps(traceback.format_exc()))
+                _log.error(json.dumps(traceback.format_exc()))
 
     @abc.abstractmethod
     def _task(self):
@@ -41,8 +41,8 @@ class Wrapper(object):
 
 
 # noinspection PyUnusedLocal
-def _handler(logger, signal_received, signum, frame):
-    logger.info('Signal received: %s' % signum)
+def _handler(signal_received, signum, frame):
+    _log.info('Signal received: %s' % signum)
     signal_received.value = True
 
 
@@ -75,7 +75,7 @@ class SqsWorker(Worker):
         return boto3.client('sqs', region_name=self._queue_region)
 
     def _get_messages(self):
-        self._logger.debug('Polling {} for messages'.format(self._queue_url))
+        _log.debug('Polling {} for messages'.format(self._queue_url))
         r = self._sqs_client.receive_message(
             QueueUrl=self._queue_url,
             MaxNumberOfMessages=1,
@@ -92,16 +92,16 @@ class SqsWorker(Worker):
 
     def _task(self):
         for msg in self._get_messages():
-            self._logger.info('Received message {}'.format(
+            _log.info('Received message {}'.format(
                 json.dumps(msg, sort_keys=True, indent=4, separators=(',', ': ')),
             ))
 
             try:
                 self._handle_message(json.loads(msg['Body']))
-                self._logger.debug('Deleting message {}'.format(msg['MessageId']))
+                _log.debug('Deleting message {}'.format(msg['MessageId']))
                 self._delete_message(msg['ReceiptHandle'])
             except:
-                self._logger.error('\r'.join([
+                _log.error('\r'.join([
                     'Error processing message {}'.format(msg['MessageId']),
                     traceback.format_exc(),
                 ]))

@@ -1,14 +1,14 @@
 import revolio as rv
 
 from nudge.core.entity import Subscription
+from nudge.core.util import autocommit
 
 
 class Subscribe(rv.Function):
 
-    def __init__(self, ctx, db, log, deferral):
+    def __init__(self, ctx, db, deferral):
         super().__init__(ctx)
         self._db = db
-        self._log = log
         self._deferral = deferral
 
     def format_request(self, bucket, *, prefix=None, regex=None, backfill=False, trigger=None):
@@ -54,6 +54,7 @@ class Subscribe(rv.Function):
             'SubscriptionId': sub.id,
         }
 
+    @autocommit
     def __call__(self, bucket, *, prefix=None, regex=None, backfill=False, trigger=None):
         sub = Subscription.create(
             bucket=bucket,
@@ -68,7 +69,5 @@ class Subscribe(rv.Function):
             sub.state = Subscription.State.BACKFILLING
             self._db.flush()
             self._deferral.send_call(self._ctx.backfill, sub.id)
-
-        self._db.commit()
 
         return sub

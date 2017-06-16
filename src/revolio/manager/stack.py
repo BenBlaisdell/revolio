@@ -9,7 +9,7 @@ from cached_property import cached_property
 import troposphere as ts
 
 
-_logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 class resource(cached_property):
@@ -154,12 +154,12 @@ class ResourceGroup(metaclass=ResourceGroupMeta):
             getattr(self, name).execute_actions()
 
     def _execute_action(self, name):
-        _logger.info('Trying to execute action: {}'.format(name))
+        _log.info('Trying to execute action: {}'.format(name))
         a = getattr(self, name)
         success = a.execute()
 
         if success:
-            _logger.info('Successfully executed action: {}'.format(name))
+            _log.info('Successfully executed action: {}'.format(name))
             a.ping_resource(self._ctx.stack_name)
 
         return False

@@ -1,20 +1,22 @@
 import boto3
 import botocore.client
-import revolio as rv
 from cached_property import threaded_cached_property
+import revolio as rv
+import revolio.logging
 
+import nudge
 import nudge.core.app
 import nudge.core.config
 import nudge.core.db
 import nudge.core.deferral
 import nudge.core.entity
 import nudge.core.function
-import nudge.core.log
 
 
 class NudgeContext:
 
     def __init__(self, *, flask_config=None):
+        rv.logging.init(nudge, flask=True)
         self._flask_config = flask_config or {}
 
     @threaded_cached_property
@@ -48,7 +50,6 @@ class NudgeContext:
     elem_srv = rv.Inject(nudge.core.entity.ElementService)
     batch_srv = rv.Inject(nudge.core.entity.BatchService)
 
-    log = rv.Inject(nudge.core.log.LogService)
     deferral = rv.Inject(nudge.core.deferral.DeferralSrv)
 
     # functions

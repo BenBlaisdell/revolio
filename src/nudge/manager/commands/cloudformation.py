@@ -14,7 +14,7 @@ from nudge.manager.context import UNCHANGED_PARAM
 from nudge.manager.infrastructure.env import EnvResources
 
 
-_logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 cf_client = boto3.client('cloudformation')
@@ -68,10 +68,10 @@ def _change_set_update(ctx):
         **_get_stack_call_params(ctx, False),
     )
 
-    _logger.info('Created change set {}'.format(ctx.stack_change_set_name))
+    _log.info('Created change set {}'.format(ctx.stack_change_set_name))
 
     changes = _get_change_set_changes(ctx)
-    _logger.info(json.dumps(changes, sort_keys=True, indent=4, separators=(',', ': ')))
+    _log.info(json.dumps(changes, sort_keys=True, indent=4, separators=(',', ': ')))
 
     if _user_prompted_update():
         prev_event = cf_client.describe_stack_events(StackName=ctx.stack_name)['StackEvents'][0]['EventId']
@@ -130,7 +130,7 @@ def _log_stack_status(ctx, *, prev_event=None):
             if reason is not None:
                 msg += ' | {}'.format(reason)
 
-            _logger.info(msg)
+            _log.info(msg)
 
         if _stack_is_stable(ctx.stack_name):
             break
@@ -160,7 +160,7 @@ def _user_prompted_update():
         elif value == '':
             return False
 
-        _logger.warning('Invalid confirmation value')
+        _log.warning('Invalid confirmation value')
 
 
 def _get_change_set_changes(ctx):
@@ -171,7 +171,7 @@ def _get_change_set_changes(ctx):
         )
         status = r['Status']
         if status != 'CREATE_COMPLETE':
-            _logger.info('Change set status: {}'.format(status))
+            _log.info('Change set status: {}'.format(status))
             time.sleep(5)
             continue
 

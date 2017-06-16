@@ -5,13 +5,13 @@ import subprocess
 import boto3
 import nudge.manager.util
 
-_logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 def release_img(ctx, component, dm_name):
     tag = build_img(ctx, component, dm_name)
     _push(tag)
-    _logger.info('Pushed {}'.format(tag))
+    _log.info('Pushed {}'.format(tag))
 
 
 def build_img(ctx, component, dm_name, *, no_cache=False):
@@ -29,7 +29,7 @@ def build_img(ctx, component, dm_name, *, no_cache=False):
         ),
     )
 
-    _logger.info('Built {}'.format(tag))
+    _log.info('Built {}'.format(tag))
 
     return tag
 
@@ -59,7 +59,7 @@ def _get_ecr_credentials(repo_account_id):
 
 def _execute_commands(*commands):
     command = '; '.join(commands)
-    _logger.info(command)
+    _log.info(command)
 
     proc = subprocess.Popen(
         command,
@@ -73,4 +73,4 @@ def _execute_commands(*commands):
         if not status:
             break
 
-        _logger.info(status)
+        _log.info(status)

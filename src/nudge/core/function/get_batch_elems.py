@@ -3,14 +3,14 @@ import datetime as dt
 import revolio as rv
 
 from nudge.core.entity.subscription import Subscription
+from nudge.core.util import autocommit
 
 
 class GetBatchElements(rv.Function):
 
-    def __init__(self, ctx, elem_srv, log, db):
+    def __init__(self, ctx, elem_srv, db):
         super().__init__(ctx)
         self._elem_srv = elem_srv
-        self._log = log
         self._db = db
 
     def format_request(self, sub_id, batch_id, *, offset=0, limit=None):
@@ -58,13 +58,11 @@ class GetBatchElements(rv.Function):
             ],
         }
 
+    @autocommit
     def __call__(self, sub_id, batch_id, *, offset=0, limit=None):
-        elems = self._elem_srv.get_batch_elems(
+        return self._elem_srv.get_batch_elems(
             sub_id=sub_id,
             batch_id=batch_id,
             offset=offset,
             limit=limit,
         )
-
-        self._db.commit()
-        return elems

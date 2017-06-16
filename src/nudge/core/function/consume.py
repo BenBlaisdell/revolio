@@ -1,13 +1,13 @@
 import revolio as rv
 
 from nudge.core.entity import Element, Batch
+from nudge.core.util import autocommit
 
 
 class Consume(rv.Function):
 
-    def __init__(self, ctx, log, db, batch_srv, elem_srv):
+    def __init__(self, ctx, db, batch_srv, elem_srv):
         super().__init__(ctx)
-        self._log = log
         self._db = db
         self._batch_srv = batch_srv
         self._elem_srv = elem_srv
@@ -36,6 +36,7 @@ class Consume(rv.Function):
 
         return {'Message': 'Success'}
 
+    @autocommit
     def __call__(self, sub_id, batch_id):
         batch = self._batch_srv.get_batch(
             sub_id=sub_id,
@@ -46,5 +47,3 @@ class Consume(rv.Function):
             raise Exception('Batch state is {}'.format(batch.state.value))
 
         batch.state = Batch.State.CONSUMED
-
-        self._db.commit()

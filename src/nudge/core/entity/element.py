@@ -1,11 +1,15 @@
 import datetime as dt
 import enum
+import logging
 import uuid
 
 import revolio as rv
 import sqlalchemy as sa
 
 from nudge.core.entity import Orm
+
+
+_log = logging.getLogger(__name__)
 
 
 class Element(rv.Entity):
@@ -95,9 +99,8 @@ class ElementOrm(Orm):
 
 class ElementService:
 
-    def __init__(self, db, log):
+    def __init__(self, db):
         self._db = db
-        self._log = log
 
     def get_elements(self, elem_ids):
         elems = [
@@ -109,7 +112,7 @@ class ElementService:
         ]
 
         assert len(elems) == len(elem_ids)
-        self._log.debug('Found elements by id: {}'.format(elems))
+        _log.debug('Found elements by id: {}'.format(elems))
         return elems
 
     def get_sub_elems(self, sub_id, *, state=Element.State.AVAILABLE):
@@ -122,7 +125,7 @@ class ElementService:
                 .all()
         ]
 
-        self._log.debug('Found elements for subscription {}: {}'.format(sub_id, elems))
+        _log.debug('Found elements for subscription {}: {}'.format(sub_id, elems))
         return elems
 
     def get_batch_elems(self, batch, *, offset=0, limit=None):
@@ -138,5 +141,5 @@ class ElementService:
                 .all()
         ]
 
-        self._log.debug('Found elements for {}: {}'.format(batch, elems))
+        _log.debug('Found elements for {}: {}'.format(batch, elems))
         return elems

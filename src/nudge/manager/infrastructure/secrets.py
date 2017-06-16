@@ -14,9 +14,6 @@ from cached_property import cached_property
 from revolio.manager.stack import resource, ResourceGroup
 
 
-_logger = logging.getLogger(__name__)
-
-
 class SecretsResources(ResourceGroup):
 
     @cached_property

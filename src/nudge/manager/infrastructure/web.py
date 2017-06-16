@@ -34,9 +34,6 @@ from nudge.core.config import ConfigService
 from revolio.manager.stack import resource, resource_group, parameter, ResourceGroup
 
 
-_logger = logging.getLogger(__name__)
-
-
 class WebResources(ResourceGroup):
 
     @cached_property

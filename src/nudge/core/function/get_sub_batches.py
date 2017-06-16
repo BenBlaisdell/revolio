@@ -1,11 +1,11 @@
 import revolio as rv
+from nudge.core.util import autocommit
 
 
 class GetSubscriptionBatches(rv.Function):
 
-    def __init__(self, ctx, log, batch_srv, db):
+    def __init__(self, ctx, batch_srv, db):
         super().__init__(ctx)
-        self._log = log
         self._batch_srv = batch_srv
         self._db = db
 
@@ -41,12 +41,9 @@ class GetSubscriptionBatches(rv.Function):
             ],
         }
 
+    @autocommit
     def __call__(self, sub_id, *, prev_id=None):
-        batches = self._batch_srv.get_subscription_batches(
+        return self._batch_srv.get_subscription_batches(
             sub_id=sub_id,
             prev_id=prev_id,
         )
-
-        self._db.commit()
-
-        return batches

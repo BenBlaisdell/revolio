@@ -8,22 +8,11 @@ from cached_property import cached_property
 import revolio as rv
 import revolio.logging
 
+import nudge
 from nudge.core.client import NudgeClient
 
 
-_logger = logging.getLogger('nudge')
-_logger.setLevel(logging.DEBUG)
-
-# console handler
-ch = logging.StreamHandler(stream=sys.stdout)
-ch.setLevel(logging.DEBUG)
-
-# formatter
-formatter = rv.logging.Formatter()
-ch.setFormatter(formatter)
-
-# attach handlers
-_logger.addHandler(ch)
+_log = logging.getLogger(__name__)
 
 
 class S3EventsWorker(rv.SqsWorker):
@@ -35,7 +24,7 @@ class S3EventsWorker(rv.SqsWorker):
     VERSION_VAR = 'VERSION'
 
     def __init__(self):
-        super(S3EventsWorker, self).__init__(_logger)
+        super(S3EventsWorker, self).__init__()
 
     @cached_property
     def _nudge_client(self):
@@ -47,7 +36,7 @@ class S3EventsWorker(rv.SqsWorker):
 
     def _handle_message(self, msg):
         # if msg['Event'] == 's3:TestEvent':
-        #     _logger.info('Received test event message for bucket {}'.format(msg['Bucket']))
+        #     _log.info('Received test event message for bucket {}'.format(msg['Bucket']))
         #     return
 
         # extract s3 notification if receiving from sns
@@ -63,7 +52,7 @@ class S3EventsWorker(rv.SqsWorker):
                 # remove milliseconds and add space between date and time
                 created = record['eventTime'][:-len('.000Z')].replace('T', ' ')
 
-                _logger.info('\r'.join(['Sending S3 object s3://{b}/{k}'.format(
+                _log.info('\r'.join(['Sending S3 object s3://{b}/{k}'.format(
                     b=bucket,
                     k=key,
                 )]))
@@ -77,4 +66,5 @@ class S3EventsWorker(rv.SqsWorker):
 
 
 if __name__ == '__main__':
+    rv.logging.init(nudge, flask=True)
     S3EventsWorker().run()

@@ -1,4 +1,5 @@
 import datetime as dt
+import uuid
 
 import revolio as rv
 from nudge.core.entity import Element, Batch
@@ -45,7 +46,11 @@ class CreateBatch(rv.Function):
         if len(elems) == 0:
             return None
 
-        batch = self._db.add(Batch.create(sub_id))
+        batch = self._db.add(Batch(
+            id=str(uuid.uuid4()),
+            state=Batch.State.UNCONSUMED,
+            sub_id=sub_id,
+        ))
 
         for elem in elems:
             assert elem.sub_id == sub_id

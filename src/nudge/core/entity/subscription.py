@@ -228,8 +228,9 @@ class SubscriptionService:
 
     def _create_and_send_batch(self, sub, elems):
         batch = self._db.add(Batch(
-            sub_id=sub.id,
+            id=str(uuid.uuid4()),
             state=Batch.State.UNCONSUMED,
+            sub_id=sub.id,
         ))
 
         for elem in elems:

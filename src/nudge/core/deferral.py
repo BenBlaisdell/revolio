@@ -19,7 +19,11 @@ class DeferralSrv:
         url = func.internal_url
         body = func.format_request(*args, **kwargs)
 
-        _log.info('Sending deferred call:', url, rv.util.log_dumps(body))
+        _log.info('\r'.join([
+            'Sending deferred call:',
+            url,
+            rv.util.log_dumps(body),
+        ]))
 
         self._sqs.send_message(
             QueueUrl=self._queue_url,

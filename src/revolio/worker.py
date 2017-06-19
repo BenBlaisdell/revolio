@@ -5,15 +5,36 @@ import logging
 import os
 import traceback
 import signal
+import uuid
 
 import boto3
 from cached_property import cached_property
+
+import revolio as rv
+import revolio.logging
 
 
 _log = logging.getLogger(__name__)
 
 
 class Worker(metaclass=abc.ABCMeta):
+
+    def __init__(self, namespace):
+        super().__init__()
+        self._transaction_id = None
+
+        handler = logging.StreamHandler()
+        handler.addFilter(rv.logging.WorkerRequestIdFilter(self))
+        handler.setLevel(logging.DEBUG)
+
+        for name in [namespace, revolio.__name__, 'sqlalchemy.engine']:
+            logger = logging.getLogger(name)
+            logger.setLevel(logging.DEBUG)
+            logger.addHandler(handler)
+
+    @property
+    def transaction_id(self):
+        return self._transaction_id
 
     def run(self):
         signal_received = Wrapper(False)
@@ -26,6 +47,7 @@ class Worker(metaclass=abc.ABCMeta):
         _log.info('Started worker: %s' % type(self).__name__)
         while not signal_received.value:
             try:
+                self._transaction_id = str(uuid.uuid4())
                 self._task()
             except Exception:
                 _log.error(json.dumps(traceback.format_exc()))

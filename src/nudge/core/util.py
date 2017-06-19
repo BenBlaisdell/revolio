@@ -12,9 +12,9 @@ def autocommit(func):
 
         if not hasattr(self, '_db'):
             _log.warning('{} has no _db attribute to commit')
-            return
+        else:
+            self._db.commit()
 
-        self._db.commit()
         return result
 
     return commit_wrapper

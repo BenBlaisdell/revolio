@@ -34,27 +34,33 @@ def request_id():
 
 
 class RequestIdFilter(logging.Filter):
-    # This is a logging filter that makes the request ID available for use in
-    # the logging format. Note that we're checking if we're in a request
-    # context, as we may want to log things before Flask is fully loaded.
+
+    def __init__(self, id_getter):
+        super().__init__()
+        self._id_getter = id_getter
+
     def filter(self, record):
-        record.request_id = request_id() if flask.has_request_context() else 'setup'
+        id = self._id_getter()
+        record.request_id = id if (id is not None) else 'setup'
         return True
+
+
+class FlaskRequestIdFilter(RequestIdFilter):
+
+    def __init__(self):
+        super().__init__(lambda: request_id() if flask.has_request_context() else None)
+
+
+class WorkerRequestIdFilter(RequestIdFilter):
+
+    def __init__(self, worker):
+        super().__init__(lambda: worker.transaction_id)
 
 
 class Formatter(logging.Formatter):
 
-    def __init__(self, flask=False):
-        f = ['%(asctime)s']
-
-        if flask:  # must have RequestIdFilter attached
-            f.append('%(request_id)s')
-
-        f.append('%(name)s:%(lineno)d')
-        f.append('%(levelname)s')
-        f.append('%(message)s')
-
-        super().__init__(' - '.join(f))
+    def __init__(self):
+        super().__init__('%(asctime)s - %(request_id)s - %(name)s:%(lineno)d - %(levelname)s - %(message)s')
 
     def format(self, record):
         # \r keeps the record intact in cloudwatch
@@ -63,14 +69,11 @@ class Formatter(logging.Formatter):
         return super(Formatter, self).format(record)
 
 
-def init(module, flask=False):
+def init_flask(module):
     h = logging.StreamHandler()
     h.setLevel(logging.DEBUG)
-
-    if flask:
-        h.addFilter(RequestIdFilter())
-
-    h.setFormatter(Formatter(flask=flask))
+    h.addFilter(FlaskRequestIdFilter())
+    h.setFormatter(Formatter())
 
     for name in [module.__name__, revolio.__name__, 'sqlalchemy.engine']:
         l = logging.getLogger(name)

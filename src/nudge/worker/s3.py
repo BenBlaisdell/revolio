@@ -24,7 +24,7 @@ class S3EventsWorker(rv.SqsWorker):
     VERSION_VAR = 'VERSION'
 
     def __init__(self):
-        super(S3EventsWorker, self).__init__()
+        super(S3EventsWorker, self).__init__(nudge.__name__)
 
     @cached_property
     def _nudge_client(self):
@@ -66,5 +66,4 @@ class S3EventsWorker(rv.SqsWorker):
 
 
 if __name__ == '__main__':
-    rv.logging.init(nudge, flask=True)
     S3EventsWorker().run()

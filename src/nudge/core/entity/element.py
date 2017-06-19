@@ -99,16 +99,16 @@ class ElementService:
         _log.debug('Found elements for subscription {}: {}'.format(sub_id, elems))
         return list(elems)
 
-    def get_batch_elems(self, batch, *, offset=0, limit=None):
+    def get_batch_elems(self, sub_id, batch_id, *, offset=0, limit=None):
         elems = self._db \
             .query(Element) \
-            .filter(Element.sub_id == batch.sub_id) \
+            .filter(Element.sub_id == sub_id) \
             .filter(Element.state == Element.State.BATCHED.value) \
-            .filter(Element.batch_id == batch.id) \
+            .filter(Element.batch_id == batch_id) \
             .limit(limit) \
             .offset(offset) \
             .all()
 
         elems = list(elems)
-        _log.debug('Found elements for {}: {}'.format(batch, elems))
+        _log.debug('Found elements for batch {}: {}'.format(batch_id, elems))
         return elems

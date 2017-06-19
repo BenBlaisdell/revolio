@@ -26,6 +26,7 @@ class App:
             ctx.create_batch,
             ctx.get_batch_elems,
             ctx.get_sub_batches,
+            ctx.get_subscription,
             ctx.handle_object_created,
             ctx.subscribe,
             ctx.unsubscribe,

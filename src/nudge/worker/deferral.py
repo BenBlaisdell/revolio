@@ -20,7 +20,7 @@ class DeferralWorker(rv.SqsWorker):
     ENV_VAR_PREFIX = 'NDG_WRK_DEF'
 
     def __init__(self):
-        super(DeferralWorker, self).__init__()
+        super(DeferralWorker, self).__init__(nudge.__name__)
 
     def _handle_message(self, msg):
         url = msg['Url']
@@ -34,5 +34,4 @@ class DeferralWorker(rv.SqsWorker):
 
 
 if __name__ == '__main__':
-    rv.logging.init(nudge, flask=True)
     DeferralWorker().run()

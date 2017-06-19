@@ -4,6 +4,7 @@ from nudge.core.function.consume import Consume
 from nudge.core.function.create_batch import CreateBatch
 from nudge.core.function.get_batch_elems import GetBatchElements
 from nudge.core.function.get_sub_batches import GetSubscriptionBatches
+from nudge.core.function.get_subscription import GetSubscription
 from nudge.core.function.handle_obj_created import HandleObjectCreated
 from nudge.core.function.subscribe import Subscribe
 from nudge.core.function.unsubscribe import Unsubscribe

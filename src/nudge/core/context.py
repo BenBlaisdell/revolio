@@ -16,7 +16,7 @@ import nudge.core.function
 class NudgeContext:
 
     def __init__(self, *, flask_config=None):
-        rv.logging.init(nudge, flask=True)
+        rv.logging.init_flask(nudge)
         self._flask_config = flask_config or {}
 
     @threaded_cached_property
@@ -60,6 +60,7 @@ class NudgeContext:
     create_batch = rv.Inject(nudge.core.function.CreateBatch)
     get_batch_elems = rv.Inject(nudge.core.function.GetBatchElements)
     get_sub_batches = rv.Inject(nudge.core.function.GetSubscriptionBatches)
+    get_subscription = rv.Inject(nudge.core.function.GetSubscription)
     handle_object_created = rv.Inject(nudge.core.function.HandleObjectCreated)
     subscribe = rv.Inject(nudge.core.function.Subscribe)
     unsubscribe = rv.Inject(nudge.core.function.Unsubscribe)

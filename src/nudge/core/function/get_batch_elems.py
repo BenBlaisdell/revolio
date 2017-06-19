@@ -52,7 +52,7 @@ class GetBatchElements(rv.Function):
                     'Bucket': elem.bucket,
                     'Key': elem.key,
                     'Size': elem.size,
-                    'Created': dt.datetime.strftime(elem.s3_created, '%Y-%m-%d %H:%M:%S'),
+                    'Created': elem.s3_created.strftime('%Y-%m-%d %H:%M:%S'),
                 }
                 for elem in elems
             ],

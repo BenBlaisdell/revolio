@@ -4,31 +4,31 @@ MAINTAINER datawarehouse <aus-eng-data-warehouse@rmn.com>
 RUN apt-get update && \
     apt-get upgrade -y
 
-RUN apt-get install -y wget vim curl mlocate
-RUN apt-get install -y python3-pip
+RUN apt-get install -y git python-pip make build-essential wget vim curl mlocate \
+                       libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev
 
-# clean apt-get
 RUN apt-get autoclean && \
     apt-get clean && \
     apt-get autoremove
 
-RUN wget https://www.python.org/ftp/python/3.5.3/Python-3.5.3.tgz && \
-    tar xzvf Python-3.5.3.tgz && \
-    cd Python-3.5.3 && \
-    ./configure && \
-    make && \
-    make install
+# install pyenv
+RUN git clone https://github.com/yyuu/pyenv.git ~/.pyenv && \
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc && \
+    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc && \
+    echo 'eval "$(pyenv init -)"' >> ~/.bashrc
 
-# update pip
-RUN pip3 install -U pip setuptools
+ENV HOME  /root
+ENV PYENV_ROOT $HOME/.pyenv
+ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
 
-RUN pip3 install ipython
+RUN pyenv install 3.5.3
+RUN pyenv global 3.5.3
+RUN pyenv rehash
 
-# install uwsgi
-RUN pip3 install uwsgi
+RUN pip install uwsgi
 
 ADD /requirements.txt /requirements.txt
-RUN pip3 install -r /requirements.txt
+RUN pip install -r /requirements.txt
 
 ADD src/ /src/
 

@@ -56,14 +56,13 @@ class Subscribe(rv.Function):
 
     @autocommit
     def __call__(self, bucket, *, prefix=None, regex=None, backfill=False, trigger=None):
-        sub = Subscription.create(
+        sub = self._db.add(Subscription(
+            state=Subscription.State.ACTIVE,
             bucket=bucket,
             prefix=prefix,
             regex=regex,
             trigger=trigger,
-        )
-
-        self._db.add(sub)
+        ))
 
         if backfill:
             sub.state = Subscription.State.BACKFILLING

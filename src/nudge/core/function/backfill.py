@@ -71,15 +71,17 @@ class Backfill(rv.Function):
             )
 
         elems = [
-            self._db.add(Element.create(
+            self._db.add(Element(
                 sub_id=sub.id,
+                state=Element.State.AVAILABLE,
                 bucket=sub.bucket,
                 key=obj_data['Key'],
                 size=obj_data['Size'],
-                created=obj_data['LastModified'],
+                s3_created=obj_data['LastModified'],
             ))
             for obj_data in r.get('Contents', [])
-            if sub.matches(
+            if self._sub_srv.matches(
+                sub=sub,
                 bucket=sub.bucket,
                 key=obj_data['Key'],
             )

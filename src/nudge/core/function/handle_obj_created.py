@@ -63,12 +63,12 @@ class HandleObjectCreated(rv.Function):
         ]
 
     def _handle_matching_sub(self, sub, bucket, key, size, created):
-        elem = self._db.add(Element.create(
+        elem = self._db.add(Element(
             sub_id=sub.id,
             bucket=bucket,
             key=key,
             size=size,
-            created=created,
+            s3_created=created,
         ))
 
         batch = self._sub_srv.evaluate(sub)

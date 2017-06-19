@@ -3,7 +3,7 @@ import logging
 import flask_sqlalchemy
 import sqlalchemy as sa
 
-from nudge.core.entity import Orm
+from nudge.core.entity import Entity
 
 
 _log = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class Database:
 
     def create_tables(self):
         _log.info('Creating tables')
-        Orm.metadata.create_all(bind=self._engine)
+        Entity.metadata.create_all(bind=self._engine)
 
     def drop_tables(self):
         _log.info('Dropping tables')
@@ -47,11 +47,11 @@ class Database:
         meta.reflect(bind=self._engine)
         for table in reversed(meta.sorted_tables):
             _log.info('Dropping table: {}'.format(table.name))
-            table.drop(bind=self._engine)
+            table.drop(bind=self._engine, )
 
     def add(self, entity):
         _log.info('Creating entity {}'.format(entity))
-        self._session.add(entity.orm)
+        self._session.add(entity)
         return entity
 
     def commit(self):

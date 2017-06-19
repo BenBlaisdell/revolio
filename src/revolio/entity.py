@@ -47,7 +47,15 @@ class EntityOrmMixin:
         onupdate=sa.sql.expression.func.current_timestamp(),
     )
 
-    data = sa.Column(MutableDict.as_mutable(sa.dialects.postgresql.JSONB))
+    data = sa.Column(
+        MutableDict.as_mutable(sa.dialects.postgresql.JSONB),
+    )
+
+    def __repr__(self, **kwargs):
+        return '<{}>'.format(' '.join([
+            type(self).__name__,
+            *['{}={}'.format(k, v) for k, v in kwargs.items()],
+        ]))
 
 
 def declarative_base():

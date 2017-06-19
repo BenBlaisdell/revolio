@@ -5,61 +5,40 @@ import uuid
 import revolio as rv
 import sqlalchemy as sa
 
-from nudge.core.entity import Orm
+from nudge.core.entity import Entity
 
 
 _log = logging.getLogger(__name__)
 
 
-class Batch(rv.Entity):
-
-    @property
-    def id(self):
-        return self._orm.id
-
-    class State(enum.Enum):
-        UNCONSUMED = 'UNCONSUMED'
-        CONSUMED = 'CONSUMED'
-
-    @property
-    def state(self):
-        return Batch.State[self._orm.state]
-
-    @state.setter
-    def state(self, state):
-        assert isinstance(state, Batch.State)
-        self._orm.state = state.value
-
-    @property
-    def sub_id(self):
-        return self._orm.sub_id
-
-    @staticmethod
-    def create(sub_id):
-        return Batch(BatchOrm(
-            id=str(uuid.uuid4()),
-            state=Batch.State.UNCONSUMED.value,
-            sub_id=sub_id,
-            data=dict(),
-        ))
-
-    def __str__(self):
-        return super().__str__(
-            id=self.id,
-            sub_id=self.sub_id,
-            state=self.state,
-        )
+class BatchState(enum.Enum):
+    UNCONSUMED = 'UNCONSUMED'
+    CONSUMED = 'CONSUMED'
 
 
-# orm
-
-
-class BatchOrm(Orm):
+class Batch(Entity):
     __tablename__ = 'batch'
 
-    id = sa.Column(sa.String, primary_key=True)
-    state = sa.Column(sa.String)
-    sub_id = sa.Column(sa.String)
+    id = sa.Column(
+        sa.String,
+        default=lambda: str(uuid.uuid4()),
+        primary_key=True,
+    )
+
+    State = BatchState
+    state = sa.Column(
+        sa.Enum(State),
+        default=State.UNCONSUMED,
+        nullable=False,
+    )
+
+    # todo: map to other tables
+    sub_id = sa.Column(
+        sa.String,
+    )
+
+    def __repr__(self):
+        return super().__repr__(id=self.id)
 
 
 # service
@@ -75,59 +54,46 @@ class BatchService:
 
     def get_active_batch(self, sub_id):
         _log.debug('Getting active batch for subscription {}'.format(sub_id))
-        orm = self._db \
-            .query(BatchOrm) \
-            .filter(BatchOrm.sub_id == sub_id) \
-            .filter(BatchOrm.state == Batch.State.UNCONSUMED.value) \
-            .order_by(BatchOrm.created) \
+        batch = self._db \
+            .query(Batch) \
+            .filter(Batch.sub_id == sub_id) \
+            .filter(Batch.state == Batch.State.UNCONSUMED.value) \
+            .order_by(Batch.created) \
             .first()
 
-        if orm is not None:
-            batch = Batch(orm)
+        if batch is not None:
             _log.debug('Found active batch {} for subscription {}'.format(batch.id, sub_id))
             return batch
 
         _log.debug('Found no active batch for subscription {}'.format(sub_id))
 
     def get_batch(self, sub_id, batch_id):
-        _log.debug('Getting batch {}'.format(batch_id))
-        orm = self._db \
-            .query(BatchOrm) \
-            .filter(BatchOrm.sub_id == sub_id) \
-            .filter(BatchOrm.id == batch_id) \
-            .filter(BatchOrm.state == Batch.State.UNCONSUMED.value) \
-            .order_by(BatchOrm.created) \
-            .first()
-
-        if orm is not None:
-            batch = Batch(orm)
-            _log.debug('Found batch {} by id'.format(batch.id))
-            return batch
-
-        _log.debug('Found no batch {} by id'.format(batch_id))
+        return self._db \
+            .query(Batch) \
+            .get(batch_id)
 
     def get_subscription_batches(self, sub_id, *, prev_id=None, limit=None, state=None):
         _log.debug('Getting batches for subscription {}'.format(sub_id))
         query = self._db \
-            .query(BatchOrm) \
-            .filter(BatchOrm.sub_id == sub_id) \
-            .order_by(BatchOrm.created) \
+            .query(Batch) \
+            .filter(Batch.sub_id == sub_id) \
+            .order_by(Batch.created) \
             .limit(limit)
 
         # only return batches created after the batch with prev_id
         if prev_id is not None:
             start_point = self._db \
-                .query(BatchOrm.created) \
+                .query(Batch.created) \
                 .get(prev_id) \
                 .subquery('start_point')
 
-            query = query.filter(BatchOrm.created > start_point)
+            query = query.filter(Batch.created > start_point)
 
         if state is not None:
             assert isinstance(state, Batch.State)
-            query = query.filter(BatchOrm.state == state.value)
+            query = query.filter(Batch.state == state.value)
 
-        batches = [Batch(orm) for orm in query.all()]
+        batches = list(query.all())
         _log.debug('Found batches for subscription {s} following batch {b}: {batches}'.format(
             s=sub_id,
             b=prev_id,

@@ -1,6 +1,8 @@
 import json
 import re
 
+import sqlalchemy as sa
+
 
 first_cap_re = re.compile('(.)([A-Z][a-z]+)')
 all_cap_re = re.compile('([a-z0-9])([A-Z])')
@@ -18,3 +20,4 @@ def snake_to_camel(name):
 def log_dumps(obj):
     """Dump object to json to be logged."""
     return json.dumps(obj, separators=(',\r', ': '))
+

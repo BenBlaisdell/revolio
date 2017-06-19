@@ -46,7 +46,7 @@ class AttachTrigger(rv.Function):
     def __call__(self, sub_id, trigger):
         sub = self._sub_srv.get_subscription(sub_id)
 
-        if sub.state == Subscription.State.INACTIVE:
+        if sub.state is Subscription.State.INACTIVE:
             raise Exception('Subscription has been deactivated')
 
         if sub.trigger is not None:
@@ -54,7 +54,7 @@ class AttachTrigger(rv.Function):
 
         sub.trigger = trigger
 
-        if sub.state == Subscription.State.BACKFILLING:
+        if sub.state is Subscription.State.BACKFILLING:
             _log.info('{} is backfilling and will be evaluated when complete'.format(sub))
             return None
 

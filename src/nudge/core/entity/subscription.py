@@ -6,10 +6,10 @@ import re
 import uuid
 
 import revolio as rv
-from revolio.serializable import KeyFormat
+import revolio.sqlalchemy.types
 import sqlalchemy as sa
 
-from nudge.core.entity import Orm, Batch, Element
+from nudge.core.entity import Entity, Batch, Element
 
 
 _log = logging.getLogger(__name__)
@@ -111,91 +111,53 @@ class SubscriptionTrigger(rv.Serializable):
         )
 
 
-class Subscription(rv.Entity):
+class SubscriptionState(enum.Enum):
+    BACKFILLING = 'BACKFILLING'
+    ACTIVE = 'ACTIVE'
+    INACTIVE = 'INACTIVE'
 
-    @property
-    def id(self):
-        return self._orm.id
 
-    class State(enum.Enum):
-        BACKFILLING = 'BACKFILLING'
-        ACTIVE = 'ACTIVE'
-        INACTIVE = 'INACTIVE'
+class Subscription(Entity):
+    __tablename__ = 'subscription'
 
-    @property
-    def state(self):
-        return Subscription.State[self._orm.state]
+    id = sa.Column(
+        sa.String,
+        default=lambda: str(uuid.uuid4()),
+        nullable=False,
+        primary_key=True,
+    )
 
-    @state.setter
-    def state(self, state):
-        assert isinstance(state, Subscription.State)
-        self._orm.state = state.value
+    State = SubscriptionState
+    state = sa.Column(
+        sa.Enum(State),
+        default=State.ACTIVE,
+        nullable=False,
+    )
 
-    @property
-    def bucket(self):
-        return self._orm.bucket
+    bucket = sa.Column(
+        sa.String,
+        nullable=False,
+    )
 
-    @property
-    def prefix(self):
-        return self._orm.prefix
+    prefix = sa.Column(
+        sa.String,
+        nullable=True
+    )
 
-    @property
-    def regex(self):
-        r = self._orm.data.get('regex', None)
-        return re.compile(r'\A{}\Z'.format(r)) if (r is not None) else None
+    regex = sa.Column(
+        rv.sqlalchemy.types.Regex,
+        nullable=True,
+    )
 
     Trigger = SubscriptionTrigger
 
-    @property
-    def trigger(self):
-        return Subscription.Trigger.deserialize(self._orm.data['trigger'], key_format=KeyFormat.Snake)
+    trigger = sa.Column(
+        rv.serializable.column_type(SubscriptionTrigger),
+        nullable=True,
+    )
 
-    @trigger.setter
-    def trigger(self, trigger):
-        assert isinstance(trigger, Subscription.Trigger)
-        self._orm.data['trigger'] = trigger.serialize(key_format=KeyFormat.Snake)
-
-    @property
-    def subscriber_ping_data(self):
-        return json.loads(self.trigger.custom) if (self.trigger.custom is not None) else {'SubscriptionId': self.id}
-
-    @staticmethod
-    def create(bucket, *, prefix=None, regex=None, trigger=None):
-        return Subscription(SubscriptionOrm(
-            id=str(uuid.uuid4()),
-            state=Subscription.State.ACTIVE.value,
-            bucket=bucket,
-            prefix=prefix,
-            data=dict(
-                regex=regex,
-                trigger=trigger.serialize(key_format=KeyFormat.Snake) if (trigger is not None) else None,
-            )
-        ))
-
-    def matches(self, bucket, key):
-        return all([
-            bucket == self.bucket,
-            key.startswith(self.prefix),
-            (self.regex is None) or self.regex.match(key[len(self.prefix):]),
-        ])
-
-    def __str__(self):
-        return super().__str__(
-            id=self.id,
-            state=self.state,
-        )
-
-
-# orm
-
-
-class SubscriptionOrm(Orm):
-    __tablename__ = 'subscription'
-
-    id = sa.Column(sa.String, primary_key=True)
-    state = sa.Column(sa.String)
-    bucket = sa.Column(sa.String)
-    prefix = sa.Column(sa.String)
+    def __repr__(self):
+        return super().__repr__(id=self.id)
 
 
 # service
@@ -209,30 +171,35 @@ class SubscriptionService:
         self._db = db
         self._elem_srv = elem_srv
 
+    @staticmethod
+    def get_ping_data(sub):
+        return json.loads(sub.trigger.custom) if (sub.trigger.custom is not None) else {'SubscriptionId': sub.id}
+
+
+    @staticmethod
+    def matches(sub, bucket, key):
+        return all([
+            bucket == sub.bucket,
+            key.startswith(sub.prefix),
+            (sub.regex is None) or sub.regex.match(key[len(sub.prefix):]),
+        ])
+
     def get_subscription(self, sub_id):
-        orm = self._db \
-            .query(SubscriptionOrm) \
+        return self._db \
+            .query(Subscription) \
             .get(sub_id)
-
-        if orm is None:
-            raise Exception('No subscription with id {}'.format(sub_id))
-
-        sub = Subscription(orm)
-        _log.debug('Found {} by id'.format(sub))
-        return sub
 
     def find_matching_subscriptions(self, bucket, key):
         query = self._db \
-            .query(SubscriptionOrm) \
-            .filter(SubscriptionOrm.state == Subscription.State.ACTIVE.value) \
-            .filter(SubscriptionOrm.bucket == bucket) \
+            .query(Subscription) \
+            .filter(Subscription.state == Subscription.State.ACTIVE.value) \
+            .filter(Subscription.bucket == bucket) \
 
         k = sa.sql.expression.bindparam('k', key)
         query = query \
-            .filter(k.startswith(SubscriptionOrm.prefix))
+            .filter(k.startswith(Subscription.prefix))
 
-        subs = [Subscription(orm) for orm in query.all()]
-        subs = list(filter(lambda s: s.matches(bucket, key), subs))
+        subs = list(filter(lambda s: self.matches(s, bucket, key), query.all()))
 
         _log.debug('Found subscriptions matching bucket="{b}" key="{k}": {s}'.format(
             b=bucket,
@@ -260,7 +227,10 @@ class SubscriptionService:
         return None
 
     def _create_and_send_batch(self, sub, elems):
-        batch = self._db.add(Batch.create(sub.id))
+        batch = self._db.add(Batch(
+            sub_id=sub.id,
+            state=Batch.State.UNCONSUMED,
+        ))
 
         for elem in elems:
             assert elem.sub_id == sub.id
@@ -274,7 +244,7 @@ class SubscriptionService:
             _log.info('Sending {} trigger message'.format(sub))
             sub.trigger.endpoint.send_message(
                 ctx=self._ctx,
-                msg=sub.subscriber_ping_data,
+                msg=self.get_ping_data(sub),
             )
 
         return batch

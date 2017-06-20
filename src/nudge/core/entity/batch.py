@@ -84,7 +84,7 @@ class BatchService:
         if prev_id is not None:
             start_point = self._db \
                 .query(Batch.created) \
-                .get(prev_id) \
+                .filter(Batch.id == prev_id) \
                 .subquery('start_point')
 
             query = query.filter(Batch.created > start_point)

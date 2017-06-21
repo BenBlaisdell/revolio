@@ -15,12 +15,12 @@ class Inject(cached_property.threaded_cached_property):
         super(Inject, self).__init__(wrapper)
 
 
-def _init_injected(ctx, callable):
+def _init_injected(ctx, injected):
     try:
-        params = inspect.signature(callable).parameters.values()
-        return callable(**{
+        params = inspect.signature(injected).parameters.values()
+        return injected(**{
             param.name: getattr(ctx, param.name)
             for param in params
         })
     except Exception as e:
-        raise Exception('Failed to inject dependencies for {}: {}'.format(str(callable), str(e))) from e
+        raise Exception(f'Failed to inject dependencies for {injected}') from e

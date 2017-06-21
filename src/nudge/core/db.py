@@ -46,11 +46,11 @@ class Database:
         meta = sa.MetaData()
         meta.reflect(bind=self._engine)
         for table in reversed(meta.sorted_tables):
-            _log.info('Dropping table: {}'.format(table.name))
+            _log.info(f'Dropping table: {table.name}')
             table.drop(bind=self._engine, )
 
     def add(self, entity):
-        _log.info('Creating entity {}'.format(entity))
+        _log.info(f'Creating entity {entity}')
         self._session.add(entity)
         return entity
 

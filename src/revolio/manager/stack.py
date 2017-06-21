@@ -131,7 +131,7 @@ class ResourceGroup(metaclass=ResourceGroupMeta):
         return self._config
 
     def _get_logical_id(self, name):
-        return '{}{}'.format(self._prefix, name)
+        return f'{self._prefix}{name}'
 
     def get_template(self):
         t = ts.Template()
@@ -159,7 +159,7 @@ class ResourceGroup(metaclass=ResourceGroupMeta):
         success = a.execute()
 
         if success:
-            _log.info('Successfully executed action: {}'.format(name))
+            _log.info(f'Successfully executed action: {name}')
             a.ping_resource(self._ctx.stack_name)
 
         return False

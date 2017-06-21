@@ -27,7 +27,7 @@ def column_type(cls):
         def process_result_value(self, value, dialect):
             return cls.deserialize(value, key_format=KeyFormat.Snake) if (value is not None) else None
 
-    SerializableType.__name__ = '{}Type'.format(cls.__name__)
+    SerializableType.__name__ = f'{cls.__name__}Type'
     return SerializableType
 
 

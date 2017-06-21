@@ -52,10 +52,7 @@ class S3EventsWorker(rv.SqsWorker):
                 # remove milliseconds and add space between date and time
                 created = record['eventTime'][:-len('.000Z')].replace('T', ' ')
 
-                _log.info('\r'.join(['Sending S3 object s3://{b}/{k}'.format(
-                    b=bucket,
-                    k=key,
-                )]))
+                _log.info(f'Sending S3 object s3://{bucket}/{key}')
 
                 self._nudge_client.handle_object_created(
                     Bucket=bucket,

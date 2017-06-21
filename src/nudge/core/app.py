@@ -75,7 +75,7 @@ class App:
 
     def _add_function(self, f):
         endpoint = f.url_path
-        _log.info('Adding endpoint: {}'.format(endpoint))
+        _log.info(f'Adding endpoint: {endpoint}')
         self._app.add_url_rule(
             endpoint,
             f.name,

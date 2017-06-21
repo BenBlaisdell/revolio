@@ -54,7 +54,7 @@ class EntityOrmMixin:
     def __repr__(self, **kwargs):
         return '<{}>'.format(' '.join([
             type(self).__name__,
-            *['{}={}'.format(k, v) for k, v in kwargs.items()],
+            *[f'{k}={v}' for k, v in kwargs.items()],
         ]))
 
 
@@ -88,7 +88,7 @@ class Entity(metaclass=abc.ABCMeta):
     def __str__(self, **kwargs):
         return '{type}<{attrs}>'.format(
             type=type(self).__name__,
-            attrs=', '.join('{}={}'.format(k, v) for k, v in kwargs.items()),
+            attrs=', '.join(f'{k}={v}' for k, v in kwargs.items()),
         )
 
     def __repr__(self):

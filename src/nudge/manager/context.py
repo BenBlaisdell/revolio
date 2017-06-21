@@ -50,7 +50,7 @@ class NudgeCommandContext(object):
 
     def get_dockerfile_path(self, component):
         a, b = component.value
-        return self._get_data_path('dockerfiles', 'Dockerfile-{}-{}'.format(a, b))
+        return self._get_data_path('dockerfiles', f'Dockerfile-{a}-{b}')
 
     def save_template(self, template):
         self._save_resource('stack/template.json', template)
@@ -109,10 +109,9 @@ class NudgeCommandContext(object):
 
     @cached_property
     def stack_change_set_name(self):
-        return 'nudge-change-set-{timestamp}-{uuid}'.format(
-            timestamp=dt.datetime.now().strftime('%Y-%m-%d-%H-%M-%S'),
-            uuid=uuid.uuid4(),
-        )
+        timestamp = dt.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+        tag = uuid.uuid4()
+        return f'nudge-change-set-{timestamp}-{tag}'
 
     # private
 

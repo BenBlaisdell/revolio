@@ -163,7 +163,7 @@ class WorkerResources(ResourceGroup):
                             content=ts.Join('', [
                                 '[cfn-auto-reloader-hook]', '\n',
                                 'triggers=post.update', '\n',
-                                'path=Resources.{}.Metadata.AWS::CloudFormation::Init'.format(self.launch_config_logical_id), '\n',
+                                f'path=Resources.{self.launch_config_logical_id}.Metadata.AWS::CloudFormation::Init', '\n',
                                 'action=/opt/aws/bin/cfn-init -v ',
                                 '    --stack    ', ts.Ref('AWS::StackName'),
                                 '    --resource ', self.launch_config_logical_id,
@@ -231,7 +231,7 @@ class WorkerResources(ResourceGroup):
             ],
             Policies=[
                 ts.iam.Policy(
-                    PolicyName='nudge-{}'.format(name),
+                    PolicyName=f'nudge-{name}',
                     PolicyDocument=awacs.aws.Policy(
                         Version='2012-10-17',
                         Statement=[statement],

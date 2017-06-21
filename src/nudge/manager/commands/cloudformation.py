@@ -68,7 +68,7 @@ def _change_set_update(ctx):
         **_get_stack_call_params(ctx, False),
     )
 
-    _log.info('Created change set {}'.format(ctx.stack_change_set_name))
+    _log.info(f'Created change set {ctx.stack_change_set_name}')
 
     changes = _get_change_set_changes(ctx)
     _log.info(json.dumps(changes, sort_keys=True, indent=4, separators=(',', ': ')))
@@ -154,7 +154,7 @@ def _get_new_events(stack_name, *, prev_event=None):
 def _user_prompted_update():
     while True:
         key = ''.join(random.choice(string.ascii_lowercase) for _ in range(5))
-        value = click.prompt('Type "{}" to confirm update'.format(key), type=str)
+        value = click.prompt(f'Type "{key}" to confirm update', type=str)
         if value == key:
             return True
         elif value == '':
@@ -171,7 +171,7 @@ def _get_change_set_changes(ctx):
         )
         status = r['Status']
         if status != 'CREATE_COMPLETE':
-            _log.info('Change set status: {}'.format(status))
+            _log.info(f'Change set status: {status}')
             time.sleep(5)
             continue
 

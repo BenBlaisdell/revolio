@@ -53,7 +53,7 @@ class BatchService:
         self._sub_srv = sub_srv
 
     def get_active_batch(self, sub_id):
-        _log.debug('Getting active batch for subscription {}'.format(sub_id))
+        _log.debug('Getting active batch for subscription {sub_id}')
         batch = self._db \
             .query(Batch) \
             .filter(Batch.sub_id == sub_id) \

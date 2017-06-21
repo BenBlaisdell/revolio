@@ -30,7 +30,7 @@ class DeferralWorker(rv.SqsWorker):
         r = requests.post(url, json=body_obj)
 
         if r.status_code != 200:
-            raise Exception('Nudge call {} failed with code {}'.format(msg['Url'], r.status_code))
+            raise Exception(f'Nudge call {url} failed with code {r.status_code}')
 
 
 if __name__ == '__main__':

@@ -94,7 +94,7 @@ class WebResources(ResourceGroup):
 
     @cached_property
     def s3_config_uri(self):
-        return 's3://{}/{}'.format(self.env.secrets.bucket_name, self.env.secrets.config_key)
+        return f's3://{self.env.secrets.bucket_name}/{self.env.secrets.config_key}'
 
     @cached_property
     def app_repo_uri(self):
@@ -312,7 +312,7 @@ class WebResources(ResourceGroup):
                             content=ts.Join('', [
                                 '[cfn-auto-reloader-hook]', '\n',
                                 'triggers=post.update', '\n',
-                                'path=Resources.{}.Metadata.AWS::CloudFormation::Init'.format(self.launch_config_logical_id), '\n',
+                                f'path=Resources.{self.launch_config_logical_id}.Metadata.AWS::CloudFormation::Init', '\n',
                                 'action=/opt/aws/bin/cfn-init -v ',
                                 '    --stack    ', ts.Ref('AWS::StackName'),
                                 '    --resource ', self.launch_config_logical_id,
@@ -525,7 +525,7 @@ class WebResources(ResourceGroup):
             ctx=self._ctx,
             config=self.config['Internal'],
             env=self.env,
-            prefix='{}{}'.format(self._prefix, 'Int'),
+            prefix=f'{self._prefix}Int',
             authorized_ips=['10.0.0.0/8', '172.16.0.0/12'],  # addresses inside vpc
             service_role=self.service_role,
             task_def=self.task_def,
@@ -539,7 +539,7 @@ class WebResources(ResourceGroup):
             ctx=self._ctx,
             config=self.config['External'],
             env=self.env,
-            prefix='{}{}'.format(self._prefix, 'Ext'),
+            prefix=f'{self._prefix}Ext',
             authorized_ips=self.authorized_ips,
             service_role=self.service_role,
             task_def=self.task_def,

@@ -20,7 +20,7 @@ class ConfigService:
         self._s3 = s3
 
     def _get_env_var_name(self, key):
-        return '{}_{}'.format(self.ENV_VAR_PREFIX, key)
+        return f'{self.ENV_VAR_PREFIX}_{key}'
 
     def _get_env_var(self, key):
         return json.loads(os.environ[self._get_env_var_name(key)])
@@ -34,11 +34,11 @@ class ConfigService:
         s3_config_uri = self._get_env_var(ConfigService.S3_CONFIG_URI)
 
         while True:
-            _log.info('Fetching S3 config: {}'.format(s3_config_uri))
+            _log.info(f'Fetching S3 config: {s3_config_uri}')
             try:
                 return self._s3.get_object(**_parse_s3_uri(s3_config_uri))['Body']
             except Exception as e:
-                _log.warning('Error fetching S3 config: {}'.format(str(e)))
+                _log.warning(f'Error fetching S3 config: {e}')
                 time.sleep(5)
 
     def __getitem__(self, key):

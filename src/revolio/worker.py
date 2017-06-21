@@ -78,7 +78,7 @@ class SqsWorker(Worker):
         return 'REVOLIO'
 
     def get_env_var_name(self, key):
-        return '{}_{}'.format(self.ENV_VAR_PREFIX, key)
+        return f'{self.ENV_VAR_PREFIX}_{key}'
 
     def get_env_var(self, key):
         return json.loads(os.environ[self.get_env_var_name(key)])
@@ -114,19 +114,22 @@ class SqsWorker(Worker):
 
     def _task(self):
         for msg in self._get_messages():
-            _log.info('Received message {}'.format(
-                json.dumps(msg, sort_keys=True, indent=4, separators=(',', ': ')),
-            ))
+            pretty_msg = json.dumps(msg, sort_keys=True, indent=4, separators=(',', ': '))
+            _log.info(f'Received message {pretty_msg}')
+
+            m_id = msg['MessageId']
+            body = msg['Body']
 
             try:
-                self._handle_message(json.loads(msg['Body']))
-                _log.debug('Deleting message {}'.format(msg['MessageId']))
+                self._handle_message(json.loads(body))
+                _log.debug(f'Deleting message {m_id}')
                 self._delete_message(msg['ReceiptHandle'])
             except:
                 _log.error('\r'.join([
-                    'Error processing message {}'.format(msg['MessageId']),
+                    f'Error processing message {m_id}',
                     traceback.format_exc(),
                 ]))
+                raise
 
     @abc.abstractmethod
     def _handle_message(self, msg):

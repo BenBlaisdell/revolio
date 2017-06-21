@@ -86,7 +86,7 @@ class ElementService:
 
         elems = list(elems)
         assert len(elems) == len(elem_ids)
-        _log.debug('Found elements by id: {}'.format(elems))
+        _log.debug(f'Found elements by id: {elems}')
         return elems
 
     def get_sub_elems(self, sub_id, *, state=Element.State.AVAILABLE):
@@ -96,7 +96,7 @@ class ElementService:
             .filter(Element.state == state.value) \
             .all()
 
-        _log.debug('Found elements for subscription {}: {}'.format(sub_id, elems))
+        _log.debug(f'Found elements for subscription {sub_id}: {elems}')
         return list(elems)
 
     def get_batch_elems(self, sub_id, batch_id, *, offset=0, limit=None):
@@ -110,5 +110,5 @@ class ElementService:
             .all()
 
         elems = list(elems)
-        _log.debug('Found elements for batch {}: {}'.format(batch_id, elems))
+        _log.debug(f'Found elements for batch {batch_id}: {elems}')
         return elems

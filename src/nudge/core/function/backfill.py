@@ -50,7 +50,7 @@ class Backfill(rv.Function):
         sub = self._sub_srv.get_subscription(sub_id)
 
         if sub.state is not Subscription.State.BACKFILLING:
-            raise Exception('Subscription is in state'.format(sub.state.value))
+            raise Exception(f'Subscription is in state {sub.state.value}')
 
         r = self._s3.list_objects_v2(
             Bucket=sub.bucket,
@@ -61,14 +61,9 @@ class Backfill(rv.Function):
 
         backfill_complete = not r.get('IsTruncated', False)
         if not backfill_complete:
-            _log.info('Sending deferred {s} backfill continuation call with token {t}'.format(
-                s=sub, t=r['ContinuationToken'],
-            ))
-            self._deferral.send_call(
-                self,
-                sub.id,
-                token=r['ContinuationToken'],
-            )
+            next_token = r['ContinuationToken']
+            _log.info(f'Sending deferred {sub} backfill continuation call with token {next_token}')
+            self._deferral.send_call(self, sub.id, token=token)
 
         elems = [
             self._db.add(Element(

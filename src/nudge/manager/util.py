@@ -35,29 +35,24 @@ _ecr_re = re.compile(
 
 def get_next_image_tag(uri, *args):
     m = _ecr_re.match(uri).groupdict()
-    return '{uri}:{t}'.format(
-        uri=uri,
-        t=_get_next_version_tag(m['account'], m['repo'], *args),
-    )
+    tag = _get_next_version_tag(m['account'], m['repo'], *args)
+    return f'{uri}:{tag}'
 
 
 def get_latest_image_tag(uri, *args):
     m = _ecr_re.match(uri).groupdict()
-    return '{uri}:{p}-{v}'.format(
-        uri=uri,
-        p='-'.join(args),
-        v=_get_latest_version(m['account'], m['repo'], *args),
-    )
+    prefix = '-'.join(args)
+    version = _get_latest_version(m['account'], m['repo'], *args)
+    return f'{uri}:{prefix}-{version}'
 
 
 def _get_next_version_tag(reg_id, repo, *args):
     major, minor, build = map(int, _get_latest_version(reg_id, repo, *args).split('.'))
     build += 1
 
-    return '{p}-{v}'.format(
-        p='-'.join(args),
-        v='.'.join(map(str, (major, minor, build))),
-    )
+    prefix = '-'.join(args)
+    version = '.'.join(map(str, (major, minor, build)))
+    return f'{prefix}-{version}'
 
 
 def _get_latest_version(reg_id, repo, *args):
@@ -104,7 +99,7 @@ def aws_logs_config(group, *, region='us-east-1'):
 def env(prefix, variables):
     return [
         ts.ecs.Environment(
-            Name='{}_{}'.format(prefix, n),
+            Name=f'{prefix}_{n}',
             Value=json.dumps(v),
         )
         for n, v in variables.items()

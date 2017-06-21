@@ -62,7 +62,7 @@ class SecretsResources(ResourceGroup):
     def key_alias(self):
         return ts.kms.Alias(
             self._get_logical_id('KeyAlias'),
-            AliasName='alias/{}'.format(self.key_name),
+            AliasName=f'alias/{self.key_name}',
             TargetKeyId=ts.Ref(self.key),
         )
 

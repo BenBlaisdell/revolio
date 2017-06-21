@@ -27,7 +27,7 @@ class Function(metaclass=abc.ABCMeta):
 
     @property
     def url_prefix(self):
-        return '/api/{}'.format(self.api_version)
+        return f'/api/{self.api_version}'
 
     @property
     def api_version(self):
@@ -35,17 +35,12 @@ class Function(metaclass=abc.ABCMeta):
 
     @property
     def url_path(self):
-        return '{prefix}/call/{name}'.format(
-            prefix=self.url_prefix,
-            name=type(self).__name__,
-        )
+        return f'{self.url_prefix}/call/{type(self).__name__}'
 
     @property
     def external_url(self):
-        return 'http://{host}{path}'.format(
-            host=self._ctx.config['Web']['External']['RecordSetName'],
-            path=self.url_path,
-        )
+        host = self._ctx.config['Web']['External']['RecordSetName']
+        return f'http://{host}{self.url_path}'
 
     @property
     def internal_url(self):

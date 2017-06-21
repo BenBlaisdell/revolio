@@ -44,6 +44,6 @@ class Consume(rv.Function):
         )
 
         if batch.state is not Batch.State.UNCONSUMED:
-            raise Exception('Batch state is {}'.format(batch.state.value))
+            raise Exception(f'Batch state is {batch.state.value}')
 
         batch.state = Batch.State.CONSUMED

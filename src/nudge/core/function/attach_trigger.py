@@ -55,7 +55,7 @@ class AttachTrigger(rv.Function):
         sub.trigger = trigger
 
         if sub.state is Subscription.State.BACKFILLING:
-            _log.info('{} is backfilling and will be evaluated when complete'.format(sub))
+            _log.info(f'{sub} is backfilling and will be evaluated when complete')
             return None
 
         return self._sub_srv.evaluate(sub)

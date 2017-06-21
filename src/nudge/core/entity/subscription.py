@@ -200,17 +200,12 @@ class SubscriptionService:
             .filter(k.startswith(Subscription.prefix))
 
         subs = list(filter(lambda s: self.matches(s, bucket, key), query.all()))
-
-        _log.debug('Found subscriptions matching bucket="{b}" key="{k}": {s}'.format(
-            b=bucket,
-            k=key,
-            s=subs,
-        ))
+        _log.debug(f'Found subscriptions matching bucket="{bucket}" key="{key}": {subs}')
 
         return subs
 
     def evaluate(self, sub):
-        _log.info('Evaluating {}'.format(sub))
+        _log.info(f'Evaluating {sub}')
 
         if sub.trigger is None:
             _log.info('No trigger attached')
@@ -218,12 +213,10 @@ class SubscriptionService:
 
         elems = self._elem_srv.get_sub_elems(sub.id, state=Element.State.AVAILABLE)
         if _batch_size(elems) >= sub.trigger.threshold:
-            _log.info('{s} has passed threshold of {t} with elements {e}'.format(
-                s=sub, t=sub.trigger.threshold, e=elems,
-            ))
+            _log.info(f'{sub} has passed threshold of {sub.trigger.threshold} with elements {elems}')
             return self._create_and_send_batch(sub, elems)
 
-        _log.info('{s} not ready to batch')
+        _log.info(f'{sub} not ready to batch')
         return None
 
     def _create_and_send_batch(self, sub, elems):
@@ -252,7 +245,7 @@ class SubscriptionService:
 
     def assert_active(self, sub):
         if sub.state is not Subscription.State.ACTIVE:
-            raise Exception('Subscription state is {}'.format(sub.state.value))
+            raise Exception(f'Subscription state is {sub.state.value}')
 
 
 def _batch_size(elems):

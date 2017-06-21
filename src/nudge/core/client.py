@@ -9,11 +9,7 @@ class NudgeClient:
         self._host = host
         self._port = port
         self._api_version = api_version
-        self._base_url = 'http://{host}:{port}/api/{version}/call/'.format(
-            host=self._host,
-            port=self._port,
-            version=self._api_version
-        ) + '{endpoint}'
+        self._base_url = f'http://{self._host}:{self._port}/api/{self._api_version}/call/' + '{endpoint}'
 
     def Subscribe(self, Bucket, Prefix, Endpoint, Regex=None, Threshold=None):
         data = {
@@ -50,6 +46,6 @@ class NudgeClient:
         r = requests.post(self._base_url.format(endpoint=endpoint), json=data)
         if r.status_code != 200:
             raise Exception('\n'.join([
-                'Nudge call {} failed with code {}'.format(endpoint, r.status_code),
+                f'Nudge call {endpoint} failed with code {r.status_code}',
                 json.dumps(r.json(), sort_keys=True, indent=4, separators=(',', ': ')),
             ]))

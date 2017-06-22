@@ -7,108 +7,13 @@ import uuid
 
 import revolio as rv
 import revolio.sqlalchemy.types
+import revolio.serializable
 import sqlalchemy as sa
 
 from nudge.core.entity import Entity, Batch, Element
-
+from nudge.core.entity.subscription.trigger import SubscriptionTrigger
 
 _log = logging.getLogger(__name__)
-
-
-class SubscriptionEndpointProtocol(enum.Enum):
-    SQS = 'SQS'
-
-
-class SubscriptionEndpoint(rv.Serializable):
-
-    Protocol = SubscriptionEndpointProtocol
-
-    @staticmethod
-    def _deserialize(data):
-        protocol = SubscriptionEndpoint.Protocol[data['Protocol']]
-        params = data['Parameters']
-
-        if protocol == SubscriptionEndpoint.Protocol.SQS:
-            return SqsEndpoint.deserialize(params)
-
-    @abc.abstractmethod
-    def send_message(self, ctx, msg):
-        """
-        
-        :type msg: dict
-        """
-        pass
-
-
-class SqsEndpoint(SubscriptionEndpoint):
-
-    def __init__(self, queue_url):
-        super(SqsEndpoint, self).__init__()
-        self._queue_url = queue_url
-
-    def _serialize(self):
-        return {
-            'Protocol': 'SQS',
-            'Parameters': {
-                'QueueUrl': self._queue_url,
-            },
-        }
-
-    @staticmethod
-    def _deserialize(data):
-        return SqsEndpoint(
-            queue_url=data['QueueUrl'],
-        )
-
-    def send_message(self, ctx, msg):
-        ctx.sqs.send_message(
-            QueueUrl=self._queue_url,
-            MessageBody=json.dumps(msg),
-        )
-
-
-# 0 byte threshold
-# every file creates a new batch
-DEFAULT_THRESHOLD = 0
-
-
-class SubscriptionTrigger(rv.Serializable):
-    """Describes the conditions under which a batch is created and the endpoint that is notified."""
-
-    Endpoint = SubscriptionEndpoint
-
-    @property
-    def endpoint(self):
-        return self._endpoint
-
-    @property
-    def threshold(self):
-        return self._threshold
-
-    @property
-    def custom(self):
-        return self._custom
-
-    def __init__(self, endpoint, *, threshold=DEFAULT_THRESHOLD, custom=None):
-        super().__init__()
-        self._endpoint = endpoint
-        self._threshold = threshold
-        self._custom = custom
-
-    def _serialize(self):
-        return {
-            'Endpoint': self._endpoint.serialize(),
-            'Threshold': self._threshold,
-            'Custom': self._custom,
-        }
-
-    @staticmethod
-    def _deserialize(data):
-        return None if (data is None) else SubscriptionTrigger(
-            endpoint=SubscriptionTrigger.Endpoint.deserialize(data.get('Endpoint', None)),
-            threshold=data.get('Threshold', DEFAULT_THRESHOLD),
-            custom=data.get('Custom', None),
-        )
 
 
 class SubscriptionState(enum.Enum):
@@ -200,12 +105,17 @@ class SubscriptionService:
             .filter(k.startswith(Subscription.prefix))
 
         subs = list(filter(lambda s: self.matches(s, bucket, key), query.all()))
-        _log.debug(f'Found subscriptions matching bucket="{bucket}" key="{key}": {subs}')
+
+        _log.debug('Found subscriptions matching bucket="{b}" key="{k}": {s}'.format(
+            b=bucket,
+            k=key,
+            s=subs,
+        ))
 
         return subs
 
     def evaluate(self, sub):
-        _log.info(f'Evaluating {sub}')
+        _log.info('Evaluating {}'.format(sub))
 
         if sub.trigger is None:
             _log.info('No trigger attached')
@@ -213,10 +123,12 @@ class SubscriptionService:
 
         elems = self._elem_srv.get_sub_elems(sub.id, state=Element.State.AVAILABLE)
         if _batch_size(elems) >= sub.trigger.threshold:
-            _log.info(f'{sub} has passed threshold of {sub.trigger.threshold} with elements {elems}')
+            _log.info('{s} has passed threshold of {t} with elements {e}'.format(
+                s=sub, t=sub.trigger.threshold, e=elems,
+            ))
             return self._create_and_send_batch(sub, elems)
 
-        _log.info(f'{sub} not ready to batch')
+        _log.info('{s} not ready to batch')
         return None
 
     def _create_and_send_batch(self, sub, elems):
@@ -245,7 +157,7 @@ class SubscriptionService:
 
     def assert_active(self, sub):
         if sub.state is not Subscription.State.ACTIVE:
-            raise Exception(f'Subscription state is {sub.state.value}')
+            raise Exception('Subscription state is {}'.format(sub.state.value))
 
 
 def _batch_size(elems):

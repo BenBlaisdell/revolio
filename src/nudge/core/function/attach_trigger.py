@@ -2,7 +2,7 @@ import logging
 
 import revolio as rv
 
-from nudge.core.entity.subscription import SubscriptionTrigger, Subscription
+from nudge.core.entity.subscription import Subscription
 from nudge.core.util import autocommit
 
 
@@ -26,8 +26,7 @@ class AttachTrigger(rv.Function):
         sub_id = request['SubscriptionId']
         assert isinstance(sub_id, str)
 
-        trigger = SubscriptionTrigger.deserialize(request.get('Trigger', {}))
-        assert isinstance(trigger, SubscriptionTrigger)
+        trigger = Subscription.Trigger.deserialize(request.get('Trigger', {}))
 
         # make call
 

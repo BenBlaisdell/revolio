@@ -2,6 +2,7 @@ import revolio as rv
 
 from nudge.core.entity import Subscription
 from nudge.core.util import autocommit
+from revolio.serializable import KeyFormat
 
 
 class Subscribe(rv.Function):
@@ -17,7 +18,7 @@ class Subscribe(rv.Function):
             'Prefix': prefix,
             'Regex': regex,
             'Backfill': backfill,
-            'Trigger': trigger,
+            'Trigger': trigger.serialize(key_format=KeyFormat.Camel) if (trigger is not None) else None,
         }
 
     def handle_request(self, request):
@@ -36,7 +37,6 @@ class Subscribe(rv.Function):
         trigger = request.get('Trigger', None)
         if trigger is not None:
             trigger = Subscription.Trigger.deserialize(trigger)
-            assert isinstance(trigger, Subscription.Trigger)
 
         # make call
 

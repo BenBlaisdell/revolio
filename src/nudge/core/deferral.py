@@ -2,7 +2,7 @@ import json
 import logging
 
 import revolio as rv
-import revolio.util
+import revolio.util.str
 
 
 _log = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ class DeferralSrv:
         _log.info('\r'.join([
             'Sending deferred call:',
             url,
-            rv.util.log_dumps(body),
+            rv.util.str.log_dumps(body),
         ]))
 
         self._sqs.send_message(

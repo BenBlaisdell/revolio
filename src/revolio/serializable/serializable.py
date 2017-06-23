@@ -6,8 +6,7 @@ import sqlalchemy.dialects.postgresql
 import sqlalchemy.ext.mutable
 
 import revolio as rv
-import revolio.serializable.fields
-import revolio.util
+import revolio.util.str
 
 
 class KeyFormat(enum.Enum):
@@ -17,8 +16,8 @@ class KeyFormat(enum.Enum):
 
 
 _key_transformations = {
-    (KeyFormat.Camel, KeyFormat.Snake): rv.util.camel_to_snake,
-    (KeyFormat.Snake, KeyFormat.Camel): rv.util.snake_to_camel,
+    (KeyFormat.Camel, KeyFormat.Snake): rv.util.str.camel_to_snake,
+    (KeyFormat.Snake, KeyFormat.Camel): rv.util.str.snake_to_camel,
 }
 
 

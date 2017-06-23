@@ -1,7 +1,7 @@
 import revolio as rv
 import revolio.util.uuid
 
-from nudge.core.entity import SubscriptionService
+from nudge.core.entity.subscription.service import SubscriptionService
 from nudge.core.entity.subscription.endpoint import SubscriptionEndpoint, SubscriptionEndpointProtocol
 
 

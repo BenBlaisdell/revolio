@@ -199,6 +199,8 @@ class Nested(Field):
 
 class ObjectEnum(Field):
 
+    # todo: implicit nested schema for docs
+
     def __init__(self, s_enum, type_field='type', params_field='parameters', **kwargs):
         """A field that accepts any instance of an enum of serializable objects.
         

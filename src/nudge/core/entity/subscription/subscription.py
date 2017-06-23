@@ -78,8 +78,16 @@ class SubscriptionService:
 
     @staticmethod
     def get_ping_data(sub):
-        return json.loads(sub.trigger.custom) if (sub.trigger.custom is not None) else {'SubscriptionId': sub.id}
+        if sub.trigger.custom is not None:
+            return json.loads(sub.trigger.custom)
 
+        return SubscriptionService.get_default_ping_data(sub.id)
+
+    @staticmethod
+    def get_default_ping_data(sub_id):
+        return {
+            'SubscriptionId': sub_id,
+        }
 
     @staticmethod
     def matches(sub, bucket, key):

@@ -1,4 +1,5 @@
 import abc
+import datetime as dt
 import enum
 
 import revolio as rv
@@ -136,6 +137,23 @@ class Int(Field):
 
         if self._max is not None:
             assert value <= self._max
+
+
+class DateTime(Field):
+
+    def __init__(self, format='%Y-%m-%d %H:%M:%S', **kwargs):
+        super().__init__(**kwargs)
+        self._format = format
+
+    def validate(self, value):
+        assert isinstance(value, dt.datetime)
+
+    def serialize(self, value, **kwargs):
+        return value.strftime(self._format)
+
+    def deserialize(self, value, **kwargs):
+        return dt.datetime.strptime(value, self._format)
+
 
 
 class Str(Field):

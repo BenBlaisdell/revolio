@@ -1,4 +1,28 @@
 import abc
+import functools
+
+from revolio.serializable import Serializable
+from revolio.serializable.fields import Field
+
+
+def validate(**fields):
+    for field in fields.values():
+        assert isinstance(field, Field)
+
+    Request = type(
+        'Request',
+        (Serializable,),
+        fields,
+    )
+
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(f, request):
+            return func(f, Request.deserialize(request))
+
+        return wrapper
+
+    return decorator
 
 
 class Function(metaclass=abc.ABCMeta):

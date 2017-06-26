@@ -1,5 +1,6 @@
 import revolio as rv
 from nudge.core.util import autocommit
+from revolio.function import validate
 
 
 class GetSubscriptionBatches(rv.Function):
@@ -15,18 +16,17 @@ class GetSubscriptionBatches(rv.Function):
             'PreviousBatchId': prev_id,
         }
 
+    @validate(
+        subscription_id=rv.serializable.fields.Str(),
+        previous_batch_id=rv.serializable.fields.Str(optional=True),
+    )
     def handle_request(self, request):
-        sub_id = request['SubscriptionId']
-        assert isinstance(sub_id, str)
-
-        prev_id = request.get('PreviousBatchId', None)
-        assert isinstance(prev_id, str) or (prev_id is None)
 
         # make call
 
         batches = self(
-            sub_id=sub_id,
-            prev_id=prev_id,
+            sub_id=request.subscription_id,
+            prev_id=request.previous_batch_id,
         )
 
         # format response

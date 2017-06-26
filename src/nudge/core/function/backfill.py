@@ -4,7 +4,7 @@ import revolio as rv
 
 from nudge.core.entity import Subscription, Element
 from nudge.core.util import autocommit
-
+from revolio.function import validate
 
 _log = logging.getLogger(__name__)
 
@@ -24,18 +24,17 @@ class Backfill(rv.Function):
             'ContinuationToken': token,
         }
 
+    @validate(
+        subscription_id=rv.serializable.fields.Str(),
+        continuation_token=rv.serializable.fields.Str(optional=True),
+    )
     def handle_request(self, request):
-        sub_id = request['SubscriptionId']
-        assert isinstance(sub_id, str)
-
-        token = request.get('ContinuationToken', None)
-        assert isinstance(token, str) or (token is None)
 
         # make call
 
         elems, backfill_complete = self(
-            sub_id=sub_id,
-            token=token,
+            sub_id=request.subscription_id,
+            token=request.continuation_token,
         )
 
         # format response

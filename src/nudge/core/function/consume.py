@@ -2,6 +2,7 @@ import revolio as rv
 
 from nudge.core.entity import Element, Batch
 from nudge.core.util import autocommit
+from revolio.function import validate
 
 
 class Consume(rv.Function):
@@ -18,18 +19,17 @@ class Consume(rv.Function):
             'BatchId': batch_id,
         }
 
+    @validate(
+        subscription_id=rv.serializable.fields.Str(),
+        batch_id=rv.serializable.fields.Str(),
+    )
     def handle_request(self, request):
-        sub_id = request['SubscriptionId']
-        assert isinstance(sub_id, str)
-
-        batch_id = request['BatchId']
-        assert isinstance(batch_id, str)
 
         # make call
 
         self(
-            sub_id=sub_id,
-            batch_id=batch_id,
+            sub_id=request.subscription_id,
+            batch_id=request.batch_id,
         )
 
         # format response

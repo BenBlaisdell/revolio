@@ -1,9 +1,7 @@
-import datetime as dt
-
 import revolio as rv
 
-from nudge.core.entity.subscription import Subscription
 from nudge.core.util import autocommit
+from revolio.function import validate
 
 
 class GetBatchElements(rv.Function):
@@ -21,31 +19,26 @@ class GetBatchElements(rv.Function):
             'Limit': limit,
         }
 
+    @validate(
+        subscription_id = rv.serializable.fields.Str(),
+        batch_id = rv.serializable.fields.Str(),
+        offset = rv.serializable.fields.Int(optional=True, default=0, min=0),
+        limit = rv.serializable.fields.Int(optional=True, default=None, min=1),
+    )
     def handle_request(self, request):
-        sub_id = request['SubscriptionId']
-        assert isinstance(sub_id, str)
-
-        batch_id = request['BatchId']
-        assert isinstance(batch_id, str)
-
-        offset = request.get('Offset', 0)
-        assert isinstance(offset, int)
-
-        limit = request.get('Limit', None)
-        assert isinstance(limit, int) or (limit is None)
 
         # make call
         elems = self(
-            sub_id=sub_id,
-            batch_id=batch_id,
-            offset=offset,
-            limit=limit,
+            sub_id=request.subscription_id,
+            batch_id=request.batch_id,
+            offset=request.offset,
+            limit=request.limit,
         )
 
         # format response
         return {
-            'SubscriptionId': sub_id,
-            'BatchId': batch_id,
+            'SubscriptionId': request.sub_id,
+            'BatchId': request.batch_id,
             'Elements': [
                 {
                     'Id': elem.id,

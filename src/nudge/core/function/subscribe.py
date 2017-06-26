@@ -1,7 +1,9 @@
 import revolio as rv
 
 from nudge.core.entity import Subscription
+from nudge.core.entity.subscription.trigger import SubscriptionTrigger
 from nudge.core.util import autocommit
+from revolio.function import validate
 from revolio.serializable import KeyFormat
 
 
@@ -21,31 +23,23 @@ class Subscribe(rv.Function):
             'Trigger': trigger.serialize(key_format=KeyFormat.Camel) if (trigger is not None) else None,
         }
 
+    @validate(
+        bucket=rv.serializable.fields.Str(),
+        prefix=rv.serializable.fields.Str(optional=True),
+        regex=rv.serializable.fields.Str(optional=True,),
+        backfill=rv.serializable.fields.Bool(optional=True, default=False),
+        trigger=rv.serializable.fields.Nested(SubscriptionTrigger),
+    )
     def handle_request(self, request):
-        bucket = request['Bucket']
-        assert isinstance(bucket, str)
-
-        prefix = request.get('Prefix', None)
-        assert isinstance(prefix, str) or (prefix is None)
-
-        regex = request.get('Regex', None)
-        assert isinstance(regex, str) or (regex is None)
-
-        backfill = request.get('Backfill', False)
-        assert isinstance(backfill, bool)
-
-        trigger = request.get('Trigger', None)
-        if trigger is not None:
-            trigger = Subscription.Trigger.deserialize(trigger)
 
         # make call
 
         sub = self(
-            bucket=bucket,
-            prefix=prefix,
-            regex=regex,
-            trigger=trigger,
-            backfill=backfill,
+            bucket=request.bucket,
+            prefix=request.prefix,
+            regex=request.regex,
+            backfill=request.backfill,
+            trigger=request.trigger,
         )
 
         # format response

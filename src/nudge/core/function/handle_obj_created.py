@@ -5,6 +5,7 @@ import revolio as rv
 
 from nudge.core.entity import Element, Batch
 from nudge.core.util import autocommit
+from revolio.function import validate
 
 
 class HandleObjectCreated(rv.Function):
@@ -24,19 +25,22 @@ class HandleObjectCreated(rv.Function):
             'Created': created,
         }
 
+    @validate(
+        bucket=rv.serializable.fields.Str(),
+        key=rv.serializable.fields.Str(),
+        size=rv.serializable.fields.Int(),
+        created=rv.serializable.fields.DateTime(),
+    )
     def handle_request(self, request):
-        bucket = request['Bucket']
-        assert isinstance(bucket, str)
 
-        key = request['Key']
-        assert isinstance(key, str)
+        # make call
 
-        size = request['Size']
-        assert isinstance(size, int)
-
-        created = request['Created']
-        assert isinstance(created, str)
-        created = dt.datetime.strptime(created, '%Y-%m-%d %H:%M:%S')
+        results = self(
+            bucket=request.bucket,
+            key=request.key,
+            size=request.size,
+            created=request.created,
+        )
 
         # format response
 
@@ -46,12 +50,7 @@ class HandleObjectCreated(rv.Function):
                     'ElementId': elem.id,
                     'BatchId': None if (batch is None) else batch.id,
                 }
-                for elem, batch in self(
-                    bucket=bucket,
-                    key=key,
-                    size=size,
-                    created=created,
-                )
+                for elem, batch in results
             },
         }
 

@@ -1,6 +1,7 @@
 import revolio as rv
 
 from nudge.core.util import autocommit
+from revolio.function import validate
 
 
 class GetSubscription(rv.Function):
@@ -14,14 +15,15 @@ class GetSubscription(rv.Function):
             'SubscriptionId': sub_id,
         }
 
+    @validate(
+        subscription_id=rv.serializable.fields.Str(),
+    )
     def handle_request(self, request):
-        sub_id = request['SubscriptionId']
-        assert isinstance(sub_id, str)
 
         # make call
 
         sub = self(
-            sub_id=sub_id,
+            sub_id=request.subscription_id,
         )
 
         # format response

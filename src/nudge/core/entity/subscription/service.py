@@ -14,24 +14,12 @@ _log = logging.getLogger(__name__)
 
 class SubscriptionService:
 
-    def __init__(self, ctx, db, elem_srv):
+    def __init__(self, ctx, db, elem_srv, ping_srv):
         super(SubscriptionService, self).__init__()
         self._ctx = ctx
         self._db = db
         self._elem_srv = elem_srv
-
-    @staticmethod
-    def get_ping_data(sub):
-        if sub.trigger.custom is not None:
-            return json.loads(sub.trigger.custom)
-
-        return SubscriptionService.get_default_ping_data(sub.id)
-
-    @staticmethod
-    def get_default_ping_data(sub_id):
-        return {
-            'SubscriptionId': sub_id,
-        }
+        self._ping_srv = ping_srv
 
     @staticmethod
     def matches(sub, bucket, key):
@@ -102,7 +90,7 @@ class SubscriptionService:
             _log.info('Sending {} trigger message'.format(sub))
             sub.trigger.endpoint.send_message(
                 ctx=self._ctx,
-                msg=self.get_ping_data(sub),
+                msg=self._ping_srv.get_ping_data(sub),
             )
 
         return batch

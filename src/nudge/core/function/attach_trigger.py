@@ -3,8 +3,9 @@ import logging
 import revolio as rv
 
 from nudge.core.entity.subscription import Subscription
+from nudge.core.entity.subscription.trigger import SubscriptionTrigger
 from nudge.core.util import autocommit
-
+from revolio.function import validate
 
 _log = logging.getLogger(__name__)
 
@@ -22,17 +23,17 @@ class AttachTrigger(rv.Function):
             'Trigger': trigger.serialize(),
         }
 
+    @validate(
+        subscription_id=rv.serializable.fields.Str(),
+        trigger=rv.serializable.fields.Nested(SubscriptionTrigger),
+    )
     def handle_request(self, request):
-        sub_id = request['SubscriptionId']
-        assert isinstance(sub_id, str)
-
-        trigger = Subscription.Trigger.deserialize(request.get('Trigger', {}))
 
         # make call
 
         batch = self(
-            sub_id=sub_id,
-            trigger=trigger,
+            sub_id=request.subscription_id,
+            trigger=request.trigger,
         )
 
         # format response

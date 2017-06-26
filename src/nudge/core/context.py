@@ -11,6 +11,7 @@ import nudge.core.db
 import nudge.core.deferral
 import nudge.core.entity
 import nudge.core.function
+import nudge.core.ping
 
 
 class NudgeContext:
@@ -51,6 +52,7 @@ class NudgeContext:
     batch_srv = rv.Inject(nudge.core.entity.BatchService)
 
     deferral = rv.Inject(nudge.core.deferral.DeferralSrv)
+    ping_srv = rv.Inject(nudge.core.ping.PingService)
 
     # functions
 

@@ -1,8 +1,10 @@
 import logging
 
 import requests
+
 import revolio as rv
 import revolio.util.str
+import revolio.worker
 
 import nudge
 
@@ -10,7 +12,7 @@ import nudge
 _log = logging.getLogger(__name__)
 
 
-class DeferralWorker(rv.SqsWorker):
+class DeferralWorker(rv.worker.SqsWorker):
 
     ENV_VAR_PREFIX = 'NDG_WRK_DEF'
 

@@ -1,16 +1,18 @@
 import logging
 
 import revolio as rv
+import revolio.serializable
+from revolio.function import validate
+from revolio.sqlalchemy import autocommit
 
 from nudge.core.entity.subscription import Subscription
 from nudge.core.entity.subscription.trigger import SubscriptionTrigger
-from nudge.core.util import autocommit
-from revolio.function import validate
+
 
 _log = logging.getLogger(__name__)
 
 
-class AttachTrigger(rv.Function):
+class AttachTrigger(rv.function.Function):
 
     def __init__(self, ctx, db, sub_srv):
         super().__init__(ctx)

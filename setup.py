@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 
 setup(
-    name='nudge',
+    name='revolio',
     version='1.0.0',
     packages=find_packages('src'),
     package_dir={'': 'src'},
@@ -18,6 +18,7 @@ setup(
         'marshmallow',
         'packaging',
         'psycopg2',
+        'python-box',
         'requests',
         'ruamel.yaml',
         'sqlalchemy',
@@ -28,7 +29,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'nudge = nudge.manager:cli',
+            'revolio = revolio.manager.cli:cli',
         ],
     },
 )

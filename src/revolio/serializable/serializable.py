@@ -21,7 +21,7 @@ _key_transformations = {
 }
 
 
-def _format_key(key, from_f, to_f):
+def format_key(key, from_f, to_f):
     """Transform a key from one format to another.
     
     Args:
@@ -108,6 +108,16 @@ class Serializable:
         for base in serializable_bases:
             for field in _directory[base][KeyFormat.Snake].values():
                 register_field(cls, field)
+
+    def __eq__(self, other):
+        if type(self) != type(other):
+            return False
+
+        for key in _directory[type(self)][KeyFormat.Snake].keys():
+            if getattr(self, key) != getattr(other, key):
+                return False
+
+        return True
 
     def serialize(self, *, key_format=KeyFormat.Camel):
         """

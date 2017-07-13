@@ -1,15 +1,15 @@
-import datetime as dt
 import uuid
 
 import revolio as rv
+import revolio.serializable
+from revolio.function import validate
+from revolio.sqlalchemy import autocommit
+
 from nudge.core.entity import Element, Batch
 
-from nudge.core.entity.subscription import Subscription
-from nudge.core.util import autocommit
-from revolio.function import validate
 
 
-class CreateBatch(rv.Function):
+class CreateBatch(rv.function.Function):
 
     def __init__(self, ctx, sub_srv, elem_srv, db):
         super().__init__(ctx)

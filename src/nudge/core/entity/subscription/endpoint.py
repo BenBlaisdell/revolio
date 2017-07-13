@@ -3,6 +3,7 @@ import enum
 import json
 
 import revolio as rv
+import revolio.serializable
 
 
 class SubscriptionEndpoint(rv.serializable.Serializable):

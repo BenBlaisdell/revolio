@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from nudge.core.context import NudgeContext
+from nudge.core.context import NudgeCoreContext
 from nudge.core.entity.subscription import SqsEndpoint
 from nudge.core.entity import Batch, Subscription
 from nudge.core.entity.element import Element
@@ -17,7 +17,7 @@ ENDPOINT_QUEUE_URL = json.loads(os.environ['ENDPOINT_QUEUE_URL'])
 
 @pytest.fixture(scope='function')
 def nudge():
-    nudge = NudgeContext(
+    nudge = NudgeCoreContext(
         S3_CONFIG_URI,
         flask_config={
             'TESTING': True,

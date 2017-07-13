@@ -3,7 +3,7 @@ import datetime as dt
 import enum
 
 import revolio as rv
-from revolio.serializable.serializable import Serializable, KeyFormat, _format_key
+from revolio.serializable.serializable import Serializable, KeyFormat, format_key
 
 # constant to differentiate between None
 NULL = object()
@@ -50,7 +50,7 @@ class Field:
 
         self._names = {
             KeyFormat.Snake: name,
-            KeyFormat.Camel: _format_key(name, from_f=KeyFormat.Snake, to_f=KeyFormat.Camel),
+            KeyFormat.Camel: format_key(name, from_f=KeyFormat.Snake, to_f=KeyFormat.Camel),
         }
 
         # register this field in the new serializable class
@@ -227,7 +227,7 @@ class ObjectEnum(Field):
         2) A `parameters` dict field that holds the parameters of the serialized object.
         
         The names of both fields can be overwritten, but must be defined in snake case.
-    
+        
         Args:
             s_enum (enum.EnumMeta): The enum of Serializable classes that can be passed.
             type_name (str): The name of the `type` field.
@@ -258,8 +258,8 @@ class ObjectEnum(Field):
         }
 
     def deserialize(self, value, key_format):
-        type_name = value[_format_key(self._type_field, from_f=KeyFormat.Snake, to_f=key_format)]
-        parameters = value[_format_key(self._params_field, from_f=KeyFormat.Snake, to_f=key_format)]
+        type_name = value[format_key(self._type_field, from_f=KeyFormat.Snake, to_f=key_format)]
+        parameters = value[format_key(self._params_field, from_f=KeyFormat.Snake, to_f=key_format)]
 
         serializable_cls = {m.name: m.value for m in self._enum}[type_name]
         return serializable_cls.deserialize(parameters, key_format=key_format)

@@ -1,11 +1,12 @@
 import revolio as rv
-
-from nudge.core.entity import Element, Batch
-from nudge.core.util import autocommit
+import revolio.serializable
 from revolio.function import validate
+from revolio.sqlalchemy import autocommit
+
+from nudge.core.entity import Batch
 
 
-class Consume(rv.Function):
+class Consume(rv.function.Function):
 
     def __init__(self, ctx, db, batch_srv, elem_srv):
         super().__init__(ctx)

@@ -1,12 +1,10 @@
-import datetime as dt
 import json
 import logging
-import os
-import sys
 
 from cached_property import cached_property
+
 import revolio as rv
-import revolio.logging
+import revolio.worker
 
 import nudge
 from nudge.core.client import NudgeClient
@@ -15,7 +13,7 @@ from nudge.core.client import NudgeClient
 _log = logging.getLogger(__name__)
 
 
-class S3EventsWorker(rv.SqsWorker):
+class S3EventsWorker(rv.worker.SqsWorker):
 
     ENV_VAR_PREFIX = 'NDG_WRK_S3E'
 

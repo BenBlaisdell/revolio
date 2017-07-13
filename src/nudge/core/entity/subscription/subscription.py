@@ -1,16 +1,13 @@
-import abc
 import enum
-import json
-import logging
-import re
 import uuid
 
-import revolio as rv
-import revolio.sqlalchemy.types
-import revolio.serializable
 import sqlalchemy as sa
 
-from nudge.core.entity import Entity, Batch, Element
+import revolio as rv
+import revolio.serializable
+import revolio.sqlalchemy.types
+
+from nudge.core.entity import Entity
 from nudge.core.entity.subscription.trigger import SubscriptionTrigger
 
 
@@ -48,14 +45,18 @@ class Subscription(Entity):
     )
 
     regex = sa.Column(
-        rv.sqlalchemy.types.Regex,
+        revolio.sqlalchemy.types.Regex,
         nullable=True,
     )
 
     Trigger = SubscriptionTrigger
     trigger = sa.Column(
-        rv.serializable.column_type(SubscriptionTrigger),
+        rv.sqlalchemy.types.serializable(SubscriptionTrigger),
         nullable=True,
+    )
+
+    iris_id = sa.Column(
+        sa.String,
     )
 
     def __repr__(self):

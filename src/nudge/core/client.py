@@ -44,8 +44,11 @@ class NudgeClient:
 
     def _post_json(self, endpoint, data):
         r = requests.post(self._base_url.format(endpoint=endpoint), json=data)
+
         if r.status_code != 200:
             raise Exception('\n'.join([
                 f'Nudge call {endpoint} failed with code {r.status_code}',
                 json.dumps(r.json(), sort_keys=True, indent=4, separators=(',', ': ')),
             ]))
+
+        return r.json()

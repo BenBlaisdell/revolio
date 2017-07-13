@@ -1,7 +1,8 @@
 import json
 
 import revolio as rv
-import revolio.util.uuid
+import revolio.serializable
+import revolio.entity
 
 from nudge.core.ping import PingService
 from nudge.core.entity.subscription.endpoint import SubscriptionEndpoint, SubscriptionEndpointProtocol
@@ -31,7 +32,7 @@ class SubscriptionTrigger(rv.serializable.Serializable):
             'A serialized JSON object that will be deserialized and sent in place of the default batch notification message.',
             'If not supplied, the message will be in the form:',
             json.dumps(
-                PingService.get_default_ping_data(sub_id=rv.util.uuid.dummy_uuid),
+                PingService.get_default_ping_data(sub_id=rv.entity.DUMMY_ID),
                 sort_keys=True, indent=4, separators=(',', ': '),
             ),
         ]),

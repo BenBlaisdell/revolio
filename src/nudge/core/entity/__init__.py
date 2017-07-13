@@ -1,9 +1,8 @@
 import revolio as rv
+import revolio.entity
 
 
-Entity = rv.declarative_base()
-
-
+Entity = rv.entity.declarative_base()
 
 
 from nudge.core.entity.element import (

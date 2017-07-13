@@ -1,10 +1,18 @@
 import abc
 import datetime as dt
+import uuid
 
 import sqlalchemy as sa
 import sqlalchemy.dialects.postgresql
 import sqlalchemy.ext.declarative
 import sqlalchemy.ext.mutable
+
+
+DUMMY_ID = '00000000-1111-2222-3333-444444444444'
+
+
+def gen_id():
+    return str(uuid.uuid4())
 
 
 class MutableDict(sa.ext.mutable.Mutable, dict):
@@ -48,7 +56,8 @@ class EntityOrmMixin:
     )
 
     data = sa.Column(
-        MutableDict.as_mutable(sa.dialects.postgresql.JSONB),
+        sa.ext.mutable.MutableDict.as_mutable(sa.dialects.postgresql.JSONB),
+        default=dict,
     )
 
     def __repr__(self, **kwargs):

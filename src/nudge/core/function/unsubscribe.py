@@ -1,16 +1,23 @@
+import logging
+
 import revolio as rv
+import revolio.serializable
+from revolio.function import validate
+from revolio.sqlalchemy import autocommit
 
 from nudge.core.entity import Subscription
-from nudge.core.util import autocommit
-from revolio.function import validate
 
 
-class Unsubscribe(rv.Function):
+_log = logging.getLogger(__name__)
 
-    def __init__(self, ctx, db, sub_srv):
+
+class Unsubscribe(rv.function.Function):
+
+    def __init__(self, ctx, db, sub_srv, iris):
         super().__init__(ctx)
         self._db = db
         self._sub_srv = sub_srv
+        self._iris = iris
 
     def format_request(self, sub_id):
         return {
@@ -38,3 +45,8 @@ class Unsubscribe(rv.Function):
         self._sub_srv.assert_active(sub)
 
         sub.state = Subscription.State.INACTIVE
+
+        _log.info(f'Removing iris listener {sub.iris_id}')
+        self._iris.remove_listener(
+            id=sub.iris_id,
+        )

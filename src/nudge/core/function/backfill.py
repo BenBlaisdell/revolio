@@ -1,15 +1,17 @@
 import logging
 
 import revolio as rv
+import revolio.serializable
+from revolio.function import validate
+from revolio.sqlalchemy import autocommit
 
 from nudge.core.entity import Subscription, Element
-from nudge.core.util import autocommit
-from revolio.function import validate
+
 
 _log = logging.getLogger(__name__)
 
 
-class Backfill(rv.Function):
+class Backfill(rv.function.Function):
 
     def __init__(self, ctx, db, sub_srv, s3, deferral):
         super().__init__(ctx)

@@ -1,9 +1,10 @@
 import revolio as rv
-from nudge.core.util import autocommit
+import revolio.serializable
 from revolio.function import validate
+from revolio.sqlalchemy import autocommit
 
 
-class GetSubscriptionBatches(rv.Function):
+class GetSubscriptionBatches(rv.function.Function):
 
     def __init__(self, ctx, batch_srv, db):
         super().__init__(ctx)

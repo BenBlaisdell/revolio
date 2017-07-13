@@ -69,13 +69,20 @@ class Formatter(logging.Formatter):
         return super(Formatter, self).format(record)
 
 
-def init_flask(module):
+def init_flask(module, *, sqlalchemy_level=logging.DEBUG):
     h = logging.StreamHandler()
     h.setLevel(logging.DEBUG)
     h.addFilter(FlaskRequestIdFilter())
     h.setFormatter(Formatter())
 
-    for name in [module.__name__, revolio.__name__, 'sqlalchemy.engine']:
-        l = logging.getLogger(name)
-        l.setLevel(logging.DEBUG)
-        l.addHandler(h)
+    for name in [module.__name__, revolio.__name__]:
+        _init_logger(name, h, logging.DEBUG)
+
+    if sqlalchemy_level is not None:
+        _init_logger('sqlalchemy.engine', h, sqlalchemy_level)
+
+
+def _init_logger(name, h, level):
+    l = logging.getLogger(name)
+    l.setLevel(level)
+    l.addHandler(h)

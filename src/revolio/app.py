@@ -1,3 +1,4 @@
+import abc
 import json
 import logging
 import traceback
@@ -8,14 +9,20 @@ import flask
 _log = logging.getLogger(__name__)
 
 
-class App:
+class App(metaclass=abc.ABCMeta):
 
-    def _setup(self, functions, flask_config, db):
+    @property
+    @abc.abstractmethod
+    def _functions(self):
+        return []
+
+    def __init__(self, flask_config, db, ctx):
+        self._ctx = ctx
 
         self._app = flask.Flask('nudge')
         self._app.config.update(**flask_config)
 
-        for f in functions:
+        for f in self._functions:
             self._add_function(f)
 
         _log.info('Adding endpoint: CheckHealth')

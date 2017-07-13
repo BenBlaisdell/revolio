@@ -6,22 +6,20 @@ import nudge.core.context
 
 class App(rv.app.App):
 
-    def __init__(self, ctx, flask_config, db):
-
-        functions = [
-            ctx.attach_trigger,
-            ctx.backfill,
-            ctx.consume,
-            ctx.create_batch,
-            ctx.get_batch_elems,
-            ctx.get_sub_batches,
-            ctx.get_subscription,
-            ctx.handle_object_created,
-            ctx.subscribe,
-            ctx.unsubscribe,
+    @property
+    def _functions(self):
+        return [
+            self._ctx.attach_trigger,
+            self._ctx.backfill,
+            self._ctx.consume,
+            self._ctx.create_batch,
+            self._ctx.get_batch_elems,
+            self._ctx.get_sub_batches,
+            self._ctx.get_subscription,
+            self._ctx.handle_object_created,
+            self._ctx.subscribe,
+            self._ctx.unsubscribe,
         ]
-
-        self._setup(functions, flask_config, db)
 
 
 if __name__ == '__main__':

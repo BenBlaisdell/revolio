@@ -8,14 +8,12 @@ import iris.core.context
 
 class App(rv.app.App):
 
-    def __init__(self, ctx, flask_config, db):
-
-        functions = [
-            ctx.add_listener,
-            ctx.remove_listener,
+    @property
+    def _functions(self):
+        return [
+            self._ctx.add_listener,
+            self._ctx.remove_listener,
         ]
-
-        self._setup(functions, flask_config, db)
 
 
 if __name__ == '__main__':

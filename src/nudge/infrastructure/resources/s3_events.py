@@ -1,6 +1,7 @@
 from cached_property import cached_property
 
 import troposphere as ts
+import troposphere.cloudwatch
 import troposphere.ecs
 import troposphere.logs
 import troposphere.sqs
@@ -135,4 +136,24 @@ class S3EventsWorkerResources(ResourceGroup):
                 MaximumPercent=200,
                 MinimumHealthyPercent=0,
             ),
+        )
+
+    @resource
+    def alarm(self):
+        env = self.env.config['Tags']['Environment'].capitalize()
+        return ts.cloudwatch.Alarm(
+            self._get_logical_id('Alarm'),
+            AlarmDescription=f'Nudge {env} S3 Events DLQ alarm',
+            Namespace='AWS/SQS',
+            MetricName='NumberOfMessagesSent',
+            Statistic='Sum',
+            Period=60,
+            EvaluationPeriods=1,
+            ComparisonOperator='GreaterThanOrEqualToThreshold',
+            Threshold='1',
+            AlarmActions=[ts.Ref(self.env.alerts_topic)],
+            Dimensions=[ts.cloudwatch.MetricDimension(
+                Name='QueueName',
+                Value=ts.Ref(self.dlq),
+            )],
         )

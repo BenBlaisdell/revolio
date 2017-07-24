@@ -259,7 +259,7 @@ class RevolioCommandContext(metaclass=abc.ABCMeta):
             **self._get_stack_call_params(False),
         )
 
-        _log.info(f'Created change set {ctx.stack_change_set_name}')
+        _log.info(f'Created change set {self.stack_change_set_name}')
 
         changes = self._get_change_set_changes()
         _log.info(json.dumps(changes, sort_keys=True, indent=4, separators=(',', ': ')))

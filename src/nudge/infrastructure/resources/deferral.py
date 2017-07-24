@@ -1,6 +1,7 @@
 from cached_property import cached_property
 
 import troposphere as ts
+import troposphere.cloudwatch
 import troposphere.ecs
 import troposphere.logs
 import troposphere.sqs
@@ -101,4 +102,26 @@ class DeferralWorkerResources(ResourceGroup):
                 MaximumPercent=200,
                 MinimumHealthyPercent=0,
             ),
+        )
+
+    @resource
+    def alarm(self):
+        env = self.env.config['Tags']['Environment'].capitalize()
+        return ts.cloudwatch.Alarm(
+            self._get_logical_id('Alarm'),
+            AlarmDescription=f'Nudge {env} Deferral DLQ alarm',
+            Namespace='AWS/SQS',
+            MetricName='NumberOfMessagesSent',
+            Statistic='Sum',
+            # https://stackoverflow.com/a/42635872
+            # period needs to be 15 minutes for sqs
+            Period=900,
+            EvaluationPeriods=1,
+            ComparisonOperator='GreaterThanThreshold',
+            Threshold='0',
+            AlarmActions=[ts.Ref(self.env.alerts_topic)],
+            Dimensions=[ts.cloudwatch.MetricDimension(
+                Name='QueueName',
+                Value=ts.GetAtt(self.dlq, 'QueueName'),
+            )],
         )

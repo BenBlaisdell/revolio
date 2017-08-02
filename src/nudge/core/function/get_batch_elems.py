@@ -20,10 +20,10 @@ class GetBatchElements(rv.function.Function):
         }
 
     @validate(
-        subscription_id = rv.serializable.fields.Str(),
-        batch_id = rv.serializable.fields.Str(),
-        offset = rv.serializable.fields.Int(optional=True, default=0, min=0),
-        limit = rv.serializable.fields.Int(optional=True, default=None, min=1),
+        subscription_id=rv.serializable.fields.Str(),
+        batch_id=rv.serializable.fields.Str(),
+        offset=rv.serializable.fields.Int(optional=True, default=0, min=0),
+        limit=rv.serializable.fields.Int(optional=True, default=None, min=1),
     )
     def handle_request(self, request):
 
@@ -37,7 +37,7 @@ class GetBatchElements(rv.function.Function):
 
         # format response
         return {
-            'SubscriptionId': request.sub_id,
+            'SubscriptionId': request.subscription_id,
             'BatchId': request.batch_id,
             'Elements': [
                 {

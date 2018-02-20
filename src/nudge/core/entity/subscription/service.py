@@ -38,7 +38,7 @@ class SubscriptionService:
         query = self._db \
             .query(Subscription) \
             .filter(Subscription.state == Subscription.State.ACTIVE.value) \
-            .filter(Subscription.bucket == bucket) \
+            .filter(Subscription.bucket == bucket)
 
         k = sa.sql.expression.bindparam('k', key)
         query = query \

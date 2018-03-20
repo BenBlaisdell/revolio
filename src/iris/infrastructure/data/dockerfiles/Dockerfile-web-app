@@ -1,4 +1,4 @@
-FROM ubuntu:15.04
+FROM ubuntu:xenial
 MAINTAINER datawarehouse <aus-eng-data-warehouse@rmn.com>
 
 RUN apt-get update && \

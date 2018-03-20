@@ -99,12 +99,12 @@ class RevolioCommandContext(metaclass=abc.ABCMeta):
 
     def create_stack(self):
         self._upload_template_s3()
-    
+
         cf_client.create_stack(
             OnFailure='DELETE',
             **self._get_stack_call_params(True),
         )
-    
+
         self._log_stack_status()
 
     def release_img(self, component, dm_name):
@@ -121,8 +121,8 @@ class RevolioCommandContext(metaclass=abc.ABCMeta):
         ])
 
         _execute_commands(
-            f'docker-machine start {dm_name}',
-            f'eval $(docker-machine env {dm_name})',
+            # f'docker-machine start {dm_name}',
+            # f'eval $(docker-machine env {dm_name})',
             f'docker build {build_flags} -f {self.get_dockerfile_path(component)} -t {tag} {self.base_path}'
         )
 
@@ -346,7 +346,7 @@ class RevolioCommandContext(metaclass=abc.ABCMeta):
                 msg = ' '.join([msg, action])
 
             value = click.prompt(msg, type=str)
-            
+
             if value == key:
                 return True
             elif value == '':
@@ -389,8 +389,8 @@ def _push(tag, dm_name):
     repo_account_id = tag.split('.', 1)[0]
     username, password, registry = _get_ecr_credentials(repo_account_id)
     _execute_commands(
-        f'docker-machine start {dm_name}',
-        f'eval $(docker-machine env {dm_name})',
+        # f'docker-machine start {dm_name}',
+        # f'eval $(docker-machine env {dm_name})',
         f'docker login -u {username} -p {password} {registry}',
         f'docker push {tag}',
     )

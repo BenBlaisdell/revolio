@@ -62,7 +62,7 @@ class Backfill(rv.function.Function):
 
         backfill_complete = not r.get('IsTruncated', False)
         if not backfill_complete:
-            next_token = r['ContinuationToken']
+            next_token = r['NextContinuationToken']
             _log.info(f'Sending deferred {sub} backfill continuation call with token {next_token}')
             self._deferral.send_call(self, sub.id, token=token)
 

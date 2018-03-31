@@ -55,20 +55,21 @@ class SubscriptionService:
         return subs
 
     def evaluate(self, sub):
-        _log.info('Evaluating {}'.format(sub))
+        _log.info(f'Evaluating {sub}')
 
         if sub.trigger is None:
             _log.info('No trigger attached')
             return
 
-        elems = self._elem_srv.get_sub_elems(sub.id, state=Element.State.AVAILABLE)
-        if _batch_size(elems) >= sub.trigger.threshold:
-            _log.info('{s} has passed threshold of {t} with elements {e}'.format(
-                s=sub, t=sub.trigger.threshold, e=elems,
-            ))
+        elems = self._elem_srv.get_batchable_sub_elems(sub.id)
+        batch_size = sum(e.size for e in elems)
+        num_elems = len(elems)
+
+        if batch_size >= sub.trigger.threshold:
+            _log.info(f'{sub} is ready to batch by passing threshold of {sub.trigger.threshold} with {num_elems} elements: {elems}')
             return self._create_and_send_batch(sub, elems)
 
-        _log.info('{s} not ready to batch')
+        _log.info(f'{sub} not ready to batch')
         return None
 
     def _create_and_send_batch(self, sub, elems):
@@ -98,7 +99,3 @@ class SubscriptionService:
     def assert_active(self, sub):
         if sub.state is not Subscription.State.ACTIVE:
             raise Exception('Subscription state is {}'.format(sub.state.value))
-
-
-def _batch_size(elems):
-    return sum(e.size for e in elems)

@@ -89,14 +89,33 @@ class ElementService:
         _log.debug(f'Found elements by id: {elems}')
         return elems
 
-    def get_sub_elems(self, sub_id, *, state=Element.State.AVAILABLE):
+    def get_batchable_sub_elems(self, sub_id, *, limit=4096):
+        """Get the oldest available elements for a subscription by s3_created time."""
+        elems = self._get_sub_elems(
+            sub_id=sub_id,
+            state=Element.State.AVAILABLE,
+            order_by=Element.s3_created.asc(),
+            limit=limit,
+        )
+
+        _log.debug(f'Found batchable elements for subscription {sub_id}: {elems}')
+        return elems
+
+    def _get_sub_elems(self, sub_id, state, order_by, limit):
+        """Get elements for a subscription.
+
+        :type sub_id: str
+        :type state: nudge.core.entity.element.ElementState
+        :type limit: int
+        """
         elems = self._db \
             .query(Element) \
             .filter(Element.sub_id == sub_id) \
             .filter(Element.state == state.value) \
+            .order_by(order_by) \
+            .limit(limit) \
             .all()
 
-        _log.debug(f'Found elements for subscription {sub_id}: {elems}')
         return list(elems)
 
     def get_batch_elems(self, sub_id, batch_id, *, offset=0, limit=None):

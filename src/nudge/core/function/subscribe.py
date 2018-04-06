@@ -33,7 +33,7 @@ class Subscribe(rv.function.Function):
     @validate(
         bucket=rv.serializable.fields.Str(),
         prefix=rv.serializable.fields.Str(optional=True),
-        regex=rv.serializable.fields.Str(optional=True,),
+        regex=rv.serializable.fields.Str(optional=True),
         backfill=rv.serializable.fields.Bool(optional=True, default=False),
         trigger=rv.serializable.fields.Nested(Subscription.Trigger, optional=True),
     )

@@ -8,7 +8,6 @@ from revolio.sqlalchemy import autocommit
 from nudge.core.entity import Element, Batch
 
 
-
 class CreateBatch(rv.function.Function):
 
     def __init__(self, ctx, sub_srv, elem_srv, db):
@@ -17,13 +16,15 @@ class CreateBatch(rv.function.Function):
         self._elem_srv = elem_srv
         self._db = db
 
-    def format_request(self, sub_id):
+    def format_request(self, sub_id, elem_limit=4096):
         return {
             'SubscriptionId': sub_id,
+            'ElementLimit': elem_limit,
         }
 
     @validate(
         subscription_id=rv.serializable.fields.Str(),
+        element_limit=rv.serializable.fields.Int(optional=True, default=4096)
     )
     def handle_request(self, request):
 
@@ -31,6 +32,7 @@ class CreateBatch(rv.function.Function):
 
         batch = self(
             sub_id=request.subscription_id,
+            elem_limit=request.element_limit,
         )
 
         # format response
@@ -40,11 +42,11 @@ class CreateBatch(rv.function.Function):
         }
 
     @autocommit
-    def __call__(self, sub_id):
+    def __call__(self, sub_id, elem_limit=4096):
         sub = self._sub_srv.get_subscription(sub_id)
         self._sub_srv.assert_active(sub)
 
-        elems = self._elem_srv.get_sub_elems(sub_id, state=Element.State.AVAILABLE)
+        elems = self._elem_srv.get_batchable_sub_elems(sub_id, limit=elem_limit)
         if len(elems) == 0:
             return None
 

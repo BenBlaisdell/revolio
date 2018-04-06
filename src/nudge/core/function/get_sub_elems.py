@@ -4,24 +4,32 @@ from revolio.function import validate
 from revolio.sqlalchemy import autocommit
 
 
-class GetBatchElements(rv.function.Function):
+class GetSubscriptionElements(rv.function.Function):
+    """Get elements belonging to a subscription.
+
+    params:
+        SubscriptionId (str)
+        Limit (int)
+        Offset (int)
+    returns:
+        SubscriptionId (str)
+        Elements (list[Element])
+    """
 
     def __init__(self, ctx, elem_srv, db):
         super().__init__(ctx)
         self._elem_srv = elem_srv
         self._db = db
 
-    def format_request(self, sub_id, batch_id, *, limit=None, offset=0):
+    def format_request(self, sub_id, *, limit=None, offset=0):
         return {
             'SubscriptionId': sub_id,
-            'BatchId': batch_id,
             'Limit': limit,
             'Offset': offset,
         }
 
     @validate(
         subscription_id=rv.serializable.fields.Str(),
-        batch_id=rv.serializable.fields.Str(),
         limit=rv.serializable.fields.Int(optional=True, default=None, min=1),
         offset=rv.serializable.fields.Int(optional=True, default=0, min=0),
     )
@@ -30,7 +38,6 @@ class GetBatchElements(rv.function.Function):
         # make call
         elems = self(
             sub_id=request.subscription_id,
-            batch_id=request.batch_id,
             limit=request.limit,
             offset=request.offset,
         )
@@ -38,7 +45,6 @@ class GetBatchElements(rv.function.Function):
         # format response
         return {
             'SubscriptionId': request.subscription_id,
-            'BatchId': request.batch_id,
             'Elements': [
                 {
                     'Id': elem.id,
@@ -52,10 +58,9 @@ class GetBatchElements(rv.function.Function):
         }
 
     @autocommit
-    def __call__(self, sub_id, batch_id, *, limit=None, offset=0):
-        return self._elem_srv.get_batch_elems(
+    def __call__(self, sub_id, *, offset=0, limit=None):
+        return self._elem_srv.get_sub_elems(
             sub_id=sub_id,
-            batch_id=batch_id,
             limit=limit,
             offset=offset,
         )
